@@ -2,15 +2,14 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .config import settings
 from .database import engine, Base
 from .routes import (
     auth_router, classes_router, students_router,
     badges_router, leaderboard_router, rules_router,
 )
-
-# 是否在 Vercel 上运行
-IS_VERCEL = os.environ.get("VERCEL") == "1"
 
 # 表是否已初始化
 _tables_created = False
@@ -31,9 +30,8 @@ async def ensure_tables():
 async def lifespan(app: FastAPI):
     await ensure_tables()
     yield
-    if not IS_VERCEL:
-        await engine.dispose()
-        print("[OK] App shutdown")
+    await engine.dispose()
+    print("[OK] App shutdown")
 
 
 app = FastAPI(
@@ -61,17 +59,21 @@ app.include_router(badges_router)
 app.include_router(leaderboard_router)
 app.include_router(rules_router)
 
-# 管理后台（仅本地模式下启用，Vercel serverless 不支持静态资源）
-if not IS_VERCEL:
-    try:
-        from starlette.middleware.sessions import SessionMiddleware
-        app.add_middleware(SessionMiddleware, secret_key="session-secret-key-change-me")
-        from .admin import setup_admin
-        setup_admin(app)
-    except Exception as e:
-        print(f"[WARN] Admin panel disabled: {e}")
-
 
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+
+
+# 静态文件服务（前端）
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """前端 SPA 路由兜底：非 API 路径都返回 index.html"""
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
