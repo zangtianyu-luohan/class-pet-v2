@@ -25,6 +25,14 @@ api.interceptors.response.use(
   err => {
     const status = err.response?.status
     const detail = err.response?.data?.detail || '请求失败'
+    const url = err.config?.url || ''
+
+    // 登录接口的错误不拦截，交给登录页自己处理
+    if (url.includes('/api/auth/login')) {
+      ElMessage.error(detail)
+      return Promise.reject(err)
+    }
+
     if (status === 401 || status === 403) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
