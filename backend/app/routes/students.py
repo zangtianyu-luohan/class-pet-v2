@@ -126,7 +126,11 @@ async def batch_create_students(
 async def list_points_logs(
     class_id: int = Query(..., description="班级ID"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=9999),
+    search: str = Query("", description="搜索学生姓名或原因"),
+    category: str = Query("", description="类型筛选"),
+    start_date: str = Query("", description="开始日期 YYYY-MM-DD"),
+    end_date: str = Query("", description="结束日期 YYYY-MM-DD"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -136,41 +140,73 @@ async def list_points_logs(
         raise HTTPException(status_code=403, detail="无权访问此班级")
 
     # 获取班级所有学生ID
-    students_result = await db.execute(select(Student.id).where(Student.class_id == class_id))
-    student_ids = [s for s in students_result.scalars().all()]
+    students_result = await db.execute(select(Student.id, Student.name).where(Student.class_id == class_id))
+    student_rows = students_result.all()
+    student_ids = [r[0] for r in student_rows]
+    student_name_map = {r[0]: r[1] for r in student_rows}
     if not student_ids:
         return {"items": [], "total": 0, "page": page, "page_size": page_size}
 
+    # 构建查询条件
+    from datetime import datetime
+    base_filter = PointsLog.student_id.in_(student_ids)
+    conditions = [base_filter]
+
+    if category:
+        conditions.append(PointsLog.category == category)
+
+    if start_date:
+        try:
+            dt = datetime.strptime(start_date, "%Y-%m-%d")
+            conditions.append(PointsLog.created_at >= dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            conditions.append(PointsLog.created_at <= dt)
+        except ValueError:
+            pass
+
+    combined_filter = conditions[0]
+    for c in conditions[1:]:
+        combined_filter = combined_filter & c
+
+    # 搜索：先按学生名匹配
+    matched_student_ids = None
+    if search:
+        matched_student_ids = [sid for sid, name in student_name_map.items() if search in name]
+        if not matched_student_ids:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
     # 查询日志
-    count_q = await db.execute(
-        select(func.count(PointsLog.id)).where(PointsLog.student_id.in_(student_ids))
-    )
+    count_filter = combined_filter
+    logs_filter = combined_filter
+    if matched_student_ids is not None:
+        search_filter = PointsLog.student_id.in_(matched_student_ids) | PointsLog.reason.ilike(f"%{search}%")
+        count_filter = combined_filter & search_filter
+        logs_filter = combined_filter & search_filter
+
+    count_q = await db.execute(select(func.count(PointsLog.id)).where(count_filter))
     total = count_q.scalar()
 
     offset = (page - 1) * page_size
     logs_q = await db.execute(
         select(PointsLog)
-        .where(PointsLog.student_id.in_(student_ids))
+        .where(logs_filter)
         .order_by(PointsLog.created_at.desc())
         .offset(offset)
         .limit(page_size)
     )
     logs = logs_q.scalars().all()
 
-    # 批量查学生名
-    student_map = {}
-    if logs:
-        sids = list(set(l.student_id for l in logs))
-        s_result = await db.execute(select(Student).where(Student.id.in_(sids)))
-        for s in s_result.scalars().all():
-            student_map[s.id] = s.name
-
     items = []
     for log in logs:
         items.append({
             "id": log.id,
             "student_id": log.student_id,
-            "student_name": student_map.get(log.student_id, "未知"),
+            "student_name": student_name_map.get(log.student_id, "未知"),
             "points": log.points,
             "reason": log.reason,
             "category": log.category or "",

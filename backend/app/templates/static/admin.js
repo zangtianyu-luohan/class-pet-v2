@@ -48,7 +48,7 @@ createApp({
 
     const weekTotal = computed(() => (stats.value.daily_stats || []).reduce((s, d) => s + d.count, 0))
     function barPct(count) { const max = Math.max(...(stats.value.daily_stats || []).map(d => d.count), 1); return Math.max((count / max) * 100, 3) }
-    function fmtTime(d) { return d ? d.substring(5, 16).replace('T', ' ') : '-' }
+    function fmtTime(d) { if (!d) return '-'; const t = new Date(d); return t.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) }
 
     async function loadStats() { try { const res = await api('get', '/api/admin/stats'); stats.value = res.data } catch {} }
     async function loadUsers() { try { const res = await api('get', '/api/admin/users'); users.value = res.data } catch {} }
@@ -76,7 +76,7 @@ createApp({
     const expiryDate = ref('')
     function openEditExpiry(u) {
       expiryTarget.value = u
-      expiryDate.value = u.expires_at ? u.expires_at.substring(0, 16) : ''
+      if (u.expires_at) { const d = new Date(u.expires_at); expiryDate.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + 'T' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') } else { expiryDate.value = '' }
       showExpiry.value = true
     }
     async function saveExpiry() {
@@ -144,13 +144,19 @@ createApp({
       dbModal.isNew = true
       dbModal.data = {}
       dbModal.error = ''
-      dbCurrentCols.value.forEach(c => { if (c.editable && c.key !== 'id') dbModal.data[c.key] = c.type === 'bool' ? false : '' })
+      dbCurrentCols.value.forEach(c => { if (c.editable && c.key !== 'id') dbModal.data[c.key] = c.type === 'bool' ? false : (c.type === 'datetime' ? null : '') })
       dbModal.show = true
     }
 
     function dbShowEdit(row) {
       dbModal.isNew = false
       dbModal.data = { ...row }
+      // Convert ISO datetime strings to datetime-local format
+      for (const col of dbCurrentCols.value) {
+        if (col.type === 'datetime' && dbModal.data[col.key]) {
+          const d = new Date(dbModal.data[col.key]); dbModal.data[col.key] = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + 'T' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
+        }
+      }
       dbModal.error = ''
       dbModal.show = true
     }
@@ -163,11 +169,22 @@ createApp({
           dbModal.error = `${col.label} 为必填项`; return
         }
       }
+      // Convert datetime-local values to ISO format
+      const saveData = { ...dbModal.data }
+      for (const col of dbModalCols.value) {
+        if (col.type === 'datetime') {
+          if (saveData[col.key]) {
+            try { saveData[col.key] = new Date(saveData[col.key]).toISOString() } catch(e) { saveData[col.key] = null }
+          } else {
+            saveData[col.key] = null
+          }
+        }
+      }
       try {
         if (dbModal.isNew) {
-          await api('post', `/api/admin/db/${dbActiveTable.value}`, dbModal.data)
+          await api('post', `/api/admin/db/${dbActiveTable.value}`, saveData)
         } else {
-          await api('put', `/api/admin/db/${dbActiveTable.value}/${dbModal.data.id}`, dbModal.data)
+          await api('put', `/api/admin/db/${dbActiveTable.value}/${dbModal.data.id}`, saveData)
         }
         dbModal.show = false
         dbLoadRows(dbPage.value)
@@ -181,6 +198,7 @@ createApp({
     }
 
     return { token, page, currentTime, sidebarOpen, goTo, stats, users, loginLogs, pointsLogs, logFilter, backingUp, weekTotal, loginForm, loginLoading, loginError, captchaQuestion, showCreateUser, newUser, showResetPwd, resetTarget, newPassword, doLogin, doLogout, loadCaptcha, loadUsers, loadLoginLogs, loadPointsLogs, barPct, fmtTime, createUser, deleteUser, openResetPwd, resetPassword, doBackup,
-      dbTables, dbActiveTable, dbRows, dbCurrentCols, dbTotal, dbPage, dbPageSize, dbSearch, dbModal, dbModalCols, dbLoadTables, dbLoadRows, dbShowAdd, dbShowEdit, dbSaveRow, dbDeleteRow }
+      dbTables, dbActiveTable, dbRows, dbCurrentCols, dbTotal, dbPage, dbPageSize, dbSearch, dbModal, dbModalCols, dbLoadTables, dbLoadRows, dbShowAdd, dbShowEdit, dbSaveRow, dbDeleteRow,
+      showExpiry, expiryTarget, expiryDate, openEditExpiry, saveExpiry }
   }
 }).mount('#app')

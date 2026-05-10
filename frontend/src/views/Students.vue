@@ -6,6 +6,7 @@
         <el-button type="primary" @click="showAdd = true" :icon="Plus">添加学生</el-button>
         <el-button @click="showBatch = true" :icon="Document">批量导入</el-button>
         <el-button @click="showBatchPoints = true" :icon="Star" :disabled="!selected.length">批量积分</el-button>
+        <el-button type="success" @click="exportStudentsExcel">📥 导出Excel</el-button>
       </div>
     </div>
 
@@ -216,7 +217,9 @@ const excelPreview = ref([])
 const excelErrors = ref([])
 
 const petEmojis = { cat: '🐱', dog: '🐶', rabbit: '🐰', panda: '🐼', penguin: '🐧' }
+const petLabels = { cat: '猫', dog: '狗', rabbit: '兔', panda: '熊猫', penguin: '企鹅' }
 function petEmoji(type) { return petEmojis[type] || '🐱' }
+function petLabel(type) { return petLabels[type] || type || '猫' }
 
 function onSelect(rows) {
   selected.value = rows
@@ -454,6 +457,23 @@ async function importExcel() {
     excelErrors.value = []
     fetchStudents()
   } catch (e) { /* handled */ }
+}
+
+// ===== Excel 导出 =====
+function exportStudentsExcel() {
+  const exportData = students.value.map((s, i) => ({
+    '序号': i + 1,
+    '学号': s.student_no,
+    '姓名': s.name,
+    '萌宠类型': petLabel(s.pet_type),
+    '萌宠昵称': s.pet_name || '-',
+    '等级': s.level,
+    '积分': s.points,
+  }))
+  const ws = XLSX.utils.json_to_sheet(exportData)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '学生列表')
+  XLSX.writeFile(wb, `学生列表_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
 onMounted(fetchStudents)

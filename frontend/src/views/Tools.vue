@@ -179,10 +179,13 @@
         <div style="font-size:48px;">🔔</div>
         <div style="color:#94a3b8;font-size:14px;">设置积分阈值，达标学生自动弹窗提醒可兑换/抽奖</div>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
         <span style="font-size:14px;font-weight:600;">阈值积分：</span>
         <el-input-number v-model="thresholdPoints" :min="1" :max="9999" size="small" />
         <el-button type="primary" size="small" @click="checkThreshold">🔍 检查达标学生</el-button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <el-checkbox v-model="thresholdAuto">进入系统时自动弹窗提醒</el-checkbox>
       </div>
       <div v-if="thresholdStudents.length" style="margin-top:12px;">
         <el-alert :title="`🎉 有 ${thresholdStudents.length} 名学生积分达标！`" type="success" show-icon :closable="false" style="margin-bottom:12px;" />
@@ -202,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import { useClassStore } from '../stores/class'
@@ -383,7 +386,7 @@ async function doExchange() {
     return
   }
   try {
-    await api.post('/api/students/points', {
+    await api.post('/api/students/points/adjust', {
       student_id: student.id,
       points: -item.cost,
       reason: `积分兑换：${item.name}`,
@@ -402,9 +405,14 @@ async function doExchange() {
 
 // 积分阈值提醒
 const showThreshold = ref(false)
-const thresholdPoints = ref(100)
+const thresholdPoints = ref(parseInt(localStorage.getItem('threshold_points') || '100'))
+const thresholdAuto = ref(localStorage.getItem('threshold_auto') !== 'false')
 const thresholdStudents = ref([])
 const thresholdChecked = ref(false)
+
+// Watch threshold settings and persist
+watch(thresholdPoints, (v) => { localStorage.setItem('threshold_points', String(v)) })
+watch(thresholdAuto, (v) => { localStorage.setItem('threshold_auto', String(v)) })
 
 async function loadThresholdStudents() {
   thresholdStudents.value = []

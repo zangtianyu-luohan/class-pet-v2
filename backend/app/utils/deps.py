@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,5 +31,9 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
+
+    # 检查账号是否过期
+    if user.expires_at and datetime.now(timezone.utc) > user.expires_at:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已过期，请联系管理员续期")
 
     return user

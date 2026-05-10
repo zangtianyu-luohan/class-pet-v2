@@ -103,6 +103,25 @@
       <router-view />
     </el-main>
   </el-container>
+
+  <!-- Threshold auto alert -->
+  <el-dialog v-model="showThresholdAlert" title="积分达标提醒" :close-on-click-modal="false" width="500px" top="8vh">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:48px;">&#127881;</div>
+      <div style="font-size:16px;color:#94a3b8;margin-top:8px;">以下学生积分已达 {{ thresholdPoints }} 分，可进行兑换或抽奖！</div>
+    </div>
+    <div v-for="s in thresholdAlertStudents" :key="s.id" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px;">
+      <div>
+        <span style="font-size:15px;font-weight:600;color:#e2e8f0;">{{ s.name }}</span>
+        <span style="font-size:12px;color:#64748b;margin-left:8px;">{{ s.student_no }}</span>
+      </div>
+      <el-tag type="success" size="large">{{ s.points }} 分</el-tag>
+    </div>
+    <template #footer>
+      <el-button type="primary" @click="showThresholdAlert=false">知道了</el-button>
+      <el-button @click="showThresholdAlert=false; router.push('/tools')">去课堂工具</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -112,6 +131,7 @@ import { useAuthStore } from '../stores/auth'
 import { useClassStore } from '../stores/class'
 import SidebarContent from './SidebarContent.vue'
 import { Fold, Expand } from '@element-plus/icons-vue'
+import api from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,6 +156,27 @@ function onResize() {
   }
 }
 
+// Threshold auto alert
+const showThresholdAlert = ref(false)
+const thresholdPoints = ref(parseInt(localStorage.getItem('threshold_points') || '100'))
+const thresholdAlertStudents = ref([])
+
+async function checkThresholdAlert() {
+  if (!classStore.currentClassId) return
+  try {
+    const res = await api.get('/api/students/', { params: { class_id: classStore.currentClassId } })
+    const tp = parseInt(localStorage.getItem('threshold_points') || '100')
+    thresholdPoints.value = tp
+    const autoCheck = localStorage.getItem('threshold_auto') !== 'false'
+    if (!autoCheck) return
+    const reached = res.data.filter(s => s.points >= tp)
+    if (reached.length > 0) {
+      thresholdAlertStudents.value = reached
+      showThresholdAlert.value = true
+    }
+  } catch (e) { /* silent */ }
+}
+
 onMounted(() => {
   window.addEventListener('resize', onResize)
   try {
@@ -143,6 +184,7 @@ onMounted(() => {
   } catch (e) {
     // 静默失败
   }
+  setTimeout(checkThresholdAlert, 1500)
 })
 
 onUnmounted(() => {
@@ -154,6 +196,12 @@ watch(() => route.path, () => {
   if (isMobile.value) {
     drawerVisible.value = false
   }
+})
+
+// 班级切换时重新检查阈值
+watch(() => classStore.currentClassId, () => {
+  if (isMobile.value) { drawerVisible.value = false }
+  setTimeout(checkThresholdAlert, 500)
 })
 
 function handleLogout() {

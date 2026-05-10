@@ -378,6 +378,10 @@
                 <select v-else-if="col.type==='bool'" v-model="dbModal.data[col.key]" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;">
                   <option :value="true">是</option><option :value="false">否</option>
                 </select>
+                <div v-else-if="col.type==='datetime'" style="display:flex;gap:8px;align-items:center;">
+                  <input v-model="dbModal.data[col.key]" type="datetime-local" style="flex:1;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;" />
+                  <button v-if="col.editable" @click="dbModal.data[col.key]=null" class="btn btn-ghost" style="padding:6px 10px;font-size:12px;white-space:nowrap;">清空</button>
+                </div>
               </div>
               <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
                 <button @click="dbModal.show=false" class="btn" style="padding:8px 20px;">取消</button>

@@ -25,7 +25,7 @@ api.interceptors.response.use(
   err => {
     const status = err.response?.status
     const detail = err.response?.data?.detail || '请求失败'
-    if (status === 401) {
+    if (status === 401 || status === 403) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
