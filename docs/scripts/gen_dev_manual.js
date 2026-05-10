@@ -236,8 +236,8 @@ const doc = new Document({
         ["后端服务 ID", "0b36e499-fc12-4850-89dd-0392dd03242c"],
         ["PostgreSQL 服务 ID", "4c6424ef-6e17-4547-9242-ddf2c4760e5b"],
         ["环境 ID", "2e416499-6004-40e6-a051-8d6b28204cb3"],
-        ["后端 API 域名", "https://class-pet-v2-production.up.railway.app"],
-        ["管理后台", "https://class-pet-v2-production.up.railway.app/admin-panel"],
+        ["后端 API 域名", "https://sps-production-6221.up.railway.app"],
+        ["管理后台", "https://sps-production-6221.up.railway.app/admin-panel"],
       ], [3000, 6026]),
       h2("5.3 关键问题与解决方案"),
       makeTable(["问题", "解决方案"], [
@@ -253,8 +253,8 @@ const doc = new Document({
       // ── 第6章 ──
       h1("第6章 测试账号"),
       makeTable(["用途", "用户名", "密码", "地址"], [
-        ["教师端", "teacher", "123456", "https://class-pet-v2-production.up.railway.app"],
-        ["管理后台", "admin", "Zty256310x", "https://class-pet-v2-production.up.railway.app/admin-panel"],
+        ["教师端", "teacher", "123456", "https://sps-production-6221.up.railway.app"],
+        ["管理后台", "admin", "Zty256310x", "https://sps-production-6221.up.railway.app/admin-panel"],
       ], [2000, 2000, 2526, 2500]),
     ]
   }]

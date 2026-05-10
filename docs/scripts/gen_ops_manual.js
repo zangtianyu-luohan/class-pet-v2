@@ -59,10 +59,10 @@ const doc = new Document({
       b("                     PostgreSQL (Railway 内网)"),
       h2("1.2 访问地址"),
       makeTable(["服务", "地址"], [
-        ["教师端前端", "https://class-pet-v2-production.up.railway.app"],
-        ["管理后台", "https://class-pet-v2-production.up.railway.app/admin-panel"],
-        ["API 文档", "https://class-pet-v2-production.up.railway.app/docs"],
-        ["健康检查", "https://class-pet-v2-production.up.railway.app/api/health"],
+        ["教师端前端", "https://sps-production-6221.up.railway.app"],
+        ["管理后台", "https://sps-production-6221.up.railway.app/admin-panel"],
+        ["API 文档", "https://sps-production-6221.up.railway.app/docs"],
+        ["健康检查", "https://sps-production-6221.up.railway.app/api/health"],
       ], [3000, 6026]),
       h2("1.3 性能优化"),
       makeTable(["优化项", "配置", "效果"], [

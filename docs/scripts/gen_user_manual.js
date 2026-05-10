@@ -48,7 +48,7 @@ const doc = new Document({
       h1("第1章 快速开始"),
       h2("1.1 访问系统"),
       p("在浏览器中打开系统地址即可使用，支持电脑和手机端。"),
-      b("电脑端：https://class-pet-v2-production.up.railway.app"),
+      b("电脑端：https://sps-production-6221.up.railway.app"),
       b("手机端：同上地址，自动适配手机屏幕"),
       h2("1.2 登录"),
       p("1. 打开系统地址，进入登录页面"),
@@ -234,9 +234,9 @@ const doc = new Document({
       pb(),
       h1("附录：系统地址"),
       makeTable(["用途", "地址"], [
-        ["教师端", "https://class-pet-v2-production.up.railway.app"],
-        ["管理后台", "https://class-pet-v2-production.up.railway.app/admin-panel"],
-        ["API 文档", "https://class-pet-v2-production.up.railway.app/docs"],
+        ["教师端", "https://sps-production-6221.up.railway.app"],
+        ["管理后台", "https://sps-production-6221.up.railway.app/admin-panel"],
+        ["API 文档", "https://sps-production-6221.up.railway.app/docs"],
       ], [3000, 6026]),
     ]
   }]
