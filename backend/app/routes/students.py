@@ -1,6 +1,6 @@
 import csv
 import io
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
@@ -120,6 +120,63 @@ async def batch_create_students(
         await db.refresh(student)
         created.append(StudentOut.model_validate(student))
     return created
+
+
+@router.get("/points-logs")
+async def list_points_logs(
+    class_id: int = Query(..., description="班级ID"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取班级的积分日志（前端教师端用）"""
+    cls_result = await db.execute(select(Class).where(Class.id == class_id, Class.owner_id == user.id))
+    if not cls_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="无权访问此班级")
+
+    # 获取班级所有学生ID
+    students_result = await db.execute(select(Student.id).where(Student.class_id == class_id))
+    student_ids = [s for s in students_result.scalars().all()]
+    if not student_ids:
+        return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
+    # 查询日志
+    count_q = await db.execute(
+        select(func.count(PointsLog.id)).where(PointsLog.student_id.in_(student_ids))
+    )
+    total = count_q.scalar()
+
+    offset = (page - 1) * page_size
+    logs_q = await db.execute(
+        select(PointsLog)
+        .where(PointsLog.student_id.in_(student_ids))
+        .order_by(PointsLog.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    logs = logs_q.scalars().all()
+
+    # 批量查学生名
+    student_map = {}
+    if logs:
+        sids = list(set(l.student_id for l in logs))
+        s_result = await db.execute(select(Student).where(Student.id.in_(sids)))
+        for s in s_result.scalars().all():
+            student_map[s.id] = s.name
+
+    items = []
+    for log in logs:
+        items.append({
+            "id": log.id,
+            "student_id": log.student_id,
+            "student_name": student_map.get(log.student_id, "未知"),
+            "points": log.points,
+            "reason": log.reason,
+            "category": log.category or "",
+            "created_at": log.created_at.isoformat() if log.created_at else "",
+        })
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/{student_id}", response_model=StudentOut)
@@ -285,6 +342,18 @@ async def get_student_logs(
         o.student_name = student.name if student else "未知"
         out.append(o)
     return out
+
+
+# ===== Excel 批量导入 =====
+@router.post("/import-excel")
+async def import_students_excel(
+    class_id: int,
+    file: bytes,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Excel 批量导入学生（通过 multipart form）"""
+    pass  # 由下方独立路由处理
 
 
 # ===== CSV 导出 =====

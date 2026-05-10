@@ -1,0 +1,7 @@
+{
+  "name": "class-pet-v2-docs",
+  "private": true,
+  "dependencies": {
+    "docx": "^9.0.0"
+  }
+}

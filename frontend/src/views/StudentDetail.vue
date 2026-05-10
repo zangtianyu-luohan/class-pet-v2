@@ -1,6 +1,6 @@
 <template>
   <div class="student-detail" v-loading="loading">
-    <el-page-header @back="$router.push('/students')" :title="'返回学生列表'">
+    <el-page-header @back="$router.push('/students')" :title="'返回'">
       <template #content>
         <span style="font-size: 18px; font-weight: 600">{{ petEmoji(student?.pet_type) }} {{ student?.name }}</span>
       </template>
@@ -8,7 +8,7 @@
 
     <el-row :gutter="20" style="margin-top: 24px" v-if="student">
       <!-- 基本信息 -->
-      <el-col :span="8">
+      <el-col :xs="24" :md="8">
         <el-card shadow="never" class="info-card">
           <div class="pet-avatar">{{ petEmoji(student.pet_type) }}</div>
           <h2>{{ student.name }}</h2>
@@ -25,15 +25,17 @@
       </el-col>
 
       <!-- 积分记录 -->
-      <el-col :span="16">
+      <el-col :xs="24" :md="16">
         <el-card shadow="never">
           <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
               <span>📝 积分记录</span>
               <el-button type="primary" size="small" @click="showPoints = true">➕ 调整积分</el-button>
             </div>
           </template>
-          <el-table :data="logs" stripe>
+
+          <!-- 桌面端表格 -->
+          <el-table v-if="!isMobile" :data="logs" stripe>
             <el-table-column prop="created_at" label="时间" width="170">
               <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
             </el-table-column>
@@ -45,6 +47,22 @@
             <el-table-column prop="reason" label="原因" />
             <el-table-column prop="category" label="类型" width="80" />
           </el-table>
+
+          <!-- 移动端卡片 -->
+          <div v-else class="log-list">
+            <div v-for="log in logs" :key="log.id" class="log-item">
+              <div class="log-left">
+                <el-tag :type="log.points > 0 ? 'success' : 'danger'" size="large">
+                  {{ log.points > 0 ? '+' : '' }}{{ log.points }}
+                </el-tag>
+              </div>
+              <div class="log-center">
+                <div class="log-reason">{{ log.reason }}</div>
+                <div class="log-meta">{{ log.category }} · {{ formatDate(log.created_at) }}</div>
+              </div>
+            </div>
+          </div>
+
           <el-empty v-if="!logs.length" description="暂无积分记录" :image-size="80" />
         </el-card>
 
@@ -62,12 +80,12 @@
     </el-row>
 
     <!-- 编辑弹窗 -->
-    <el-dialog v-model="showEdit" title="编辑学生信息" width="400px">
+    <el-dialog v-model="showEdit" title="编辑学生信息">
       <el-form :model="editForm" label-width="60px">
         <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
         <el-form-item label="学号"><el-input v-model="editForm.student_no" /></el-form-item>
         <el-form-item label="萌宠">
-          <el-select v-model="editForm.pet_type">
+          <el-select v-model="editForm.pet_type" style="width: 100%">
             <el-option label="🐱 猫咪" value="cat" />
             <el-option label="🐶 小狗" value="dog" />
             <el-option label="🐰 兔子" value="rabbit" />
@@ -83,8 +101,8 @@
     </el-dialog>
 
     <!-- 积分弹窗 -->
-    <el-dialog v-model="showPoints" title="调整积分" width="400px">
-      <el-input-number v-model="pointsValue" :min="-100" :max="100" />
+    <el-dialog v-model="showPoints" title="调整积分">
+      <el-input-number v-model="pointsValue" :min="-100" :max="100" style="width: 100%" />
       <el-input v-model="pointsReason" placeholder="原因" style="margin-top: 12px" />
       <template #footer>
         <el-button @click="showPoints = false">取消</el-button>
@@ -95,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
@@ -108,6 +126,8 @@ const student = ref(null)
 const logs = ref([])
 const badges = ref([])
 const loading = ref(true)
+
+const isMobile = computed(() => window.innerWidth < 768)
 
 const showEdit = ref(false)
 const editForm = reactive({ name: '', student_no: '', pet_type: 'cat' })
@@ -161,7 +181,7 @@ onMounted(fetchAll)
 
 <style scoped>
 .student-detail { max-width: 1100px; }
-.info-card { text-align: center; border-radius: 16px; }
+.info-card { text-align: center; border-radius: 16px; margin-bottom: 16px; }
 .pet-avatar { font-size: 64px; margin: 8px 0; }
 .info-card h2 { margin: 0; font-size: 20px; }
 .student-no { color: #94a3b8; font-size: 13px; }
@@ -170,4 +190,15 @@ onMounted(fetchAll)
 .info-grid .value { font-size: 20px; font-weight: 700; color: #1e293b; }
 .info-grid .value.positive { color: #10b981; }
 .info-grid .value.negative { color: #ef4444; }
+
+/* 移动端积分记录 */
+.log-list { display: flex; flex-direction: column; gap: 8px; }
+.log-item {
+  display: flex; align-items: center; gap: 12px;
+  background: #f8fafc; border-radius: 10px; padding: 12px;
+}
+.log-left { flex-shrink: 0; }
+.log-center { flex: 1; min-width: 0; }
+.log-reason { font-size: 14px; color: #1e293b; font-weight: 500; }
+.log-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
 </style>

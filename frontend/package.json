@@ -10,17 +10,20 @@
     "vercel-build": "vite build"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "pinia": "^2.3.0",
-    "element-plus": "^2.9.1",
     "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.7.9",
-    "dayjs": "^1.11.13"
+    "dayjs": "^1.11.13",
+    "element-plus": "^2.9.1",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "sass": "^1.83.0",
+    "terser": "^5.47.1",
     "vite": "^6.0.5",
-    "sass": "^1.83.0"
+    "vite-plugin-compression": "^0.5.1"
   }
 }

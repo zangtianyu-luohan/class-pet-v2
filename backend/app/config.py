@@ -3,12 +3,12 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # 应用
-    APP_NAME: str = "班级OK萌宠"
+    APP_NAME: str = "学生积分管理系统"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
 
     # 数据库 - 环境变量覆盖，默认 SQLite
-    DATABASE_URL: str = "sqlite+aiosqlite:///./class_pet.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./student_points.db"
 
     # JWT
     SECRET_KEY: str = "change-this-to-a-random-secret-key-in-production"

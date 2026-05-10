@@ -9,12 +9,6 @@ const routes = [
     meta: { guest: true }
   },
   {
-    path: '/register',
-    name: 'Register',
-    component: () => import('../views/Register.vue'),
-    meta: { guest: true }
-  },
-  {
     path: '/',
     component: () => import('../components/AppLayout.vue'),
     meta: { requiresAuth: true },
@@ -26,6 +20,7 @@ const routes = [
       { path: 'leaderboard', name: 'Leaderboard', component: () => import('../views/Leaderboard.vue') },
       { path: 'badges', name: 'Badges', component: () => import('../views/Badges.vue') },
       { path: 'tools', name: 'Tools', component: () => import('../views/Tools.vue') },
+      { path: 'points-logs', name: 'PointsLogs', component: () => import('../views/PointsLogs.vue') },
       { path: 'classes', name: 'Classes', component: () => import('../views/Classes.vue') },
       { path: 'settings', name: 'Settings', component: () => import('../views/Settings.vue') },
     ]

@@ -2,11 +2,11 @@
   <div class="classes-page">
     <div class="page-header">
       <h1>🏫 班级管理</h1>
-      <el-button type="primary" @click="showAdd = true"><el-icon><Plus /></el-icon> 创建班级</el-button>
+      <el-button type="primary" @click="showAdd = true" :icon="Plus">创建班级</el-button>
     </div>
 
     <el-row :gutter="16">
-      <el-col :span="8" v-for="cls in classStore.classes" :key="cls.id">
+      <el-col :xs="24" :sm="12" :md="8" v-for="cls in classStore.classes" :key="cls.id">
         <el-card shadow="hover" class="class-card" :class="{ active: cls.id === classStore.currentClassId }">
           <div class="class-header">
             <h3>{{ cls.name }}</h3>
@@ -17,19 +17,19 @@
             <span>👥 {{ cls.student_count }} 名学生</span>
             <span>📅 {{ formatDate(cls.created_at) }}</span>
           </div>
-          <el-space style="margin-top: 12px">
+          <div class="class-actions">
             <el-button size="small" type="primary" @click="classStore.setCurrentClass(cls.id)">切换</el-button>
             <el-button size="small" @click="editClass(cls)">编辑</el-button>
             <el-popconfirm title="确定删除此班级？" @confirm="deleteClass(cls.id)">
               <template #reference><el-button size="small" type="danger">删除</el-button></template>
             </el-popconfirm>
-          </el-space>
+          </div>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- 创建/编辑弹窗 -->
-    <el-dialog v-model="showAdd" :title="editId ? '编辑班级' : '创建班级'" width="400px">
+    <el-dialog v-model="showAdd" :title="editId ? '编辑班级' : '创建班级'">
       <el-form :model="form" label-width="60px">
         <el-form-item label="名称"><el-input v-model="form.name" placeholder="如：三年级一班" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" placeholder="可选" /></el-form-item>
@@ -44,6 +44,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import api from '../api'
@@ -92,12 +93,13 @@ async function deleteClass(id) {
 
 <style scoped>
 .classes-page { max-width: 900px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-header h1 { margin: 0; font-size: 22px; }
 .class-card { border-radius: 16px; margin-bottom: 16px; }
 .class-card.active { border: 2px solid #6366f1; }
 .class-header { display: flex; justify-content: space-between; align-items: center; }
-.class-header h3 { margin: 0; }
+.class-header h3 { margin: 0; font-size: 16px; }
 .class-desc { color: #94a3b8; font-size: 13px; margin: 4px 0 8px; }
-.class-meta { display: flex; gap: 16px; font-size: 13px; color: #64748b; }
+.class-meta { display: flex; gap: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap; }
+.class-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 </style>

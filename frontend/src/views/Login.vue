@@ -3,7 +3,7 @@
     <div class="login-card">
       <div class="login-header">
         <div class="logo">🐾</div>
-        <h1>班级OK萌宠</h1>
+        <h1>学生积分管理系统</h1>
         <p>趣味班级积分管理系统</p>
       </div>
 
@@ -24,8 +24,22 @@
             :prefix-icon="Lock"
             size="large"
             show-password
-            @keyup.enter="handleLogin"
           />
+        </el-form-item>
+        <el-form-item prop="captcha">
+          <div class="captcha-row">
+            <el-input
+              v-model="form.captcha"
+              placeholder="计算结果"
+              size="large"
+              style="flex: 1"
+              @keyup.enter="handleLogin"
+            />
+            <div class="captcha-box" @click="refreshCaptcha" title="点击刷新">
+              <span v-if="captchaQuestion">{{ captchaQuestion }}</span>
+              <span v-else style="color: #94a3b8">加载中...</span>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item>
           <el-button
@@ -40,33 +54,43 @@
         </el-form-item>
       </el-form>
 
-      <div class="login-footer">
-        还没有账号？
-        <router-link to="/register">立即注册</router-link>
-      </div>
-
       <div class="login-pets">🐱 🐶 🐰 🐼 🐧</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import api from '../api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const formRef = ref()
 const loading = ref(false)
 
-const form = reactive({ username: '', password: '' })
+const form = reactive({ username: '', password: '', captcha: '' })
+const captchaId = ref('')
+const captchaQuestion = ref('')
 
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+}
+
+async function refreshCaptcha() {
+  try {
+    const res = await api.get('/api/auth/captcha/json')
+    captchaId.value = res.data.captcha_id
+    captchaQuestion.value = res.data.question
+    form.captcha = ''
+  } catch (e) {
+    captchaQuestion.value = '验证码加载失败'
+  }
 }
 
 async function handleLogin() {
@@ -76,15 +100,17 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    await authStore.login(form.username, form.password)
+    await authStore.loginWithCaptcha(form.username, form.password, captchaId.value, form.captcha)
     ElMessage.success('登录成功！')
     router.push('/dashboard')
   } catch (e) {
-    // 错误已在 api 拦截器中处理
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
 }
+
+onMounted(refreshCaptcha)
 </script>
 
 <style scoped>
@@ -96,6 +122,7 @@ async function handleLogin() {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
   position: relative;
   overflow: hidden;
+  padding: 20px;
 }
 
 .login-page::before,
@@ -130,7 +157,8 @@ async function handleLogin() {
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 40px 32px;
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
   box-shadow: 0 25px 60px rgba(0,0,0,0.15);
   z-index: 1;
 }
@@ -159,16 +187,32 @@ async function handleLogin() {
   margin-top: 4px;
 }
 
-.login-footer {
-  text-align: center;
-  font-size: 14px;
-  color: #94a3b8;
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
 }
 
-.login-footer a {
-  color: #6366f1;
-  text-decoration: none;
-  font-weight: 500;
+.captcha-box {
+  background: #f0f0f0;
+  border: 1px solid #dcdfe6;
+  border-radius: 10px;
+  padding: 0 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  user-select: none;
+  min-width: 120px;
+}
+
+.captcha-box:hover {
+  border-color: #6366f1;
 }
 
 .login-pets {
@@ -176,5 +220,19 @@ async function handleLogin() {
   margin-top: 24px;
   font-size: 20px;
   letter-spacing: 8px;
+}
+
+@media (max-width: 767px) {
+  .login-card {
+    padding: 28px 20px;
+    border-radius: 20px;
+  }
+  .logo { font-size: 40px; }
+  .login-header h1 { font-size: 20px; }
+}
+
+@media (max-width: 359px) {
+  .login-page { padding: 12px; }
+  .login-card { padding: 24px 16px; }
 }
 </style>

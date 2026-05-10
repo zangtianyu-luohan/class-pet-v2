@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生积分管理系统 - 管理后台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <!-- 自托管脚本，无需外部依赖 -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .login-overlay { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1b4b, #312e81, #1e1b4b); }
+    .login-box { background: #1e293b; border-radius: 16px; padding: 36px 32px; width: 360px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); border: 1px solid #334155; }
+    .login-box h2 { text-align: center; margin-bottom: 8px; font-size: 20px; color: #f1f5f9; }
+    .login-box .sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px; }
+    .login-box input { width: 100%; padding: 12px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: #e2e8f0; font-size: 14px; margin-bottom: 12px; outline: none; }
+    .login-box input:focus { border-color: #6366f1; }
+    .login-box input::placeholder { color: #475569; }
+    .captcha-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .captcha-row input { flex: 1; margin-bottom: 0; }
+    .captcha-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 0 14px; height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 15px; font-weight: 600; color: #a5b4fc; white-space: nowrap; }
+    .captcha-box:hover { border-color: #6366f1; }
+    .login-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .login-btn:hover { opacity: 0.9; }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-error { color: #f87171; font-size: 13px; text-align: center; margin-bottom: 8px; min-height: 20px; }
+
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 220px; background: linear-gradient(180deg, #1e1b4b, #0f172a); border-right: 1px solid #1e293b; padding: 20px 0; flex-shrink: 0; }
+    .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid #1e293b; margin-bottom: 12px; }
+    .sidebar-logo h3 { font-size: 16px; color: #f1f5f9; }
+    .sidebar-logo span { font-size: 12px; color: #64748b; }
+    .nav-item { padding: 11px 20px; cursor: pointer; font-size: 14px; color: #94a3b8; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+    .nav-item:hover { background: rgba(255,255,255,0.04); color: #e2e8f0; }
+    .nav-item.active { background: rgba(99,102,241,0.15); color: #a5b4fc; border-right: 3px solid #6366f1; }
+    .sidebar-footer { position: absolute; bottom: 0; width: 220px; padding: 16px 20px; border-top: 1px solid #1e293b; }
+    .sidebar-footer button { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; }
+
+    .admin-main { flex: 1; padding: 24px; overflow-y: auto; }
+
+    .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .metric { background: #1e293b; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; border: 1px solid #334155; transition: transform 0.2s; }
+    .metric:hover { transform: translateY(-2px); }
+    .m-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .m-value { font-size: 24px; font-weight: 800; color: #f8fafc; }
+    .m-label { font-size: 12px; color: #94a3b8; }
+
+    .charts { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .panel { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; margin-bottom: 16px; }
+    .panel-title { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .panel-sub { font-size: 12px; color: #64748b; font-weight: 400; }
+
+    .bars { display: flex; align-items: flex-end; gap: 8px; height: 180px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+    .bar-val { font-size: 12px; font-weight: 700; color: #a5b4fc; margin-bottom: 4px; }
+    .bar-wrap { flex: 1; width: 100%; max-width: 44px; display: flex; align-items: flex-end; }
+    .bar-fill { width: 100%; background: linear-gradient(180deg, #818cf8, #6366f1); border-radius: 5px 5px 0 0; min-height: 3px; }
+    .bar-label { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span:first-child { color: #94a3b8; }
+    .info-row span:last-child { color: #e2e8f0; font-weight: 500; }
+
+    .log-row { display: grid; grid-template-columns: 40px 80px 1fr 100px; gap: 8px; padding: 7px 0; border-bottom: 1px solid #1e293b; font-size: 13px; align-items: center; }
+    .log-row.fail { background: rgba(239,68,68,0.06); border-radius: 6px; padding: 7px 8px; }
+    .log-head { color: #64748b; font-size: 12px; border-bottom: 1px solid #334155; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { text-align: left; padding: 10px 12px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid #1e293b; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .tag { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+    .tag-success { background: rgba(16,185,129,0.15); color: #34d399; }
+    .tag-danger { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    .btn { padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #6366f1; color: #fff; }
+    .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+
+    .radio-group { display: flex; gap: 0; }
+    .radio-group button { padding: 6px 14px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; cursor: pointer; font-size: 12px; }
+    .radio-group button:first-child { border-radius: 6px 0 0 6px; }
+    .radio-group button:last-child { border-radius: 0 6px 6px 0; }
+    .radio-group button.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .backup-center { text-align: center; padding: 40px 0; }
+    .backup-center .icon { font-size: 48px; margin-bottom: 12px; }
+    .backup-center p { color: #94a3b8; margin-bottom: 20px; }
+    .time-display { font-family: 'Courier New', monospace; color: #64748b; font-size: 13px; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal-box { background: #1e293b; border-radius: 14px; padding: 24px; min-width: 340px; max-width: 90vw; border: 1px solid #334155; box-shadow: 0 25px 60px rgba(0,0,0,0.5); }
+    .modal-box h3 { margin-bottom: 16px; color: #f1f5f9; }
+    .modal-box label { display: block; color: #94a3b8; font-size: 13px; margin-bottom: 4px; margin-top: 10px; }
+    .modal-box input { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; outline: none; margin-bottom: 0; }
+    .modal-box input:focus { border-color: #6366f1; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .empty { text-align: center; padding: 30px; color: #475569; }
+
+    /* ── 移动端顶部栏 ── */
+    .mobile-header { display: none; }
+
+    @media (max-width: 767px) {
+      /* 顶栏 */
+      .mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #1e1b4b; border-bottom: 1px solid #1e293b; position: sticky; top: 0; z-index: 90; }
+      .mobile-header h3 { font-size: 15px; color: #f1f5f9; }
+      .mobile-header button { background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+
+      /* 侧边栏：抽屉式 */
+      .admin-sidebar {
+        display: none; position: fixed; top: 0; left: 0; bottom: 0; width: 240px; z-index: 200;
+        background: linear-gradient(180deg, #1e1b4b, #0f172a); padding-top: 16px;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.5); animation: slideIn 0.2s ease;
+      }
+      .admin-sidebar.open { display: block; }
+      @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+      .sidebar-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 199; }
+      .sidebar-mask.open { display: block; }
+
+      /* 主区域 */
+      .admin-main { padding: 12px !important; }
+      .admin-main h2 { font-size: 16px !important; }
+      .admin-main h3 { font-size: 15px !important; }
+
+      /* 登录框 */
+      .login-box { width: calc(100vw - 32px); padding: 24px 20px; }
+      .login-box h2 { font-size: 18px; }
+      .captcha-row { flex-direction: column; gap: 8px; }
+      .captcha-box { height: 40px; justify-content: center; }
+
+      /* 指标卡片 2列 */
+      .metrics { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+      .metric { padding: 12px !important; }
+      .m-icon { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+      .m-value { font-size: 18px !important; }
+      .m-label { font-size: 11px !important; }
+
+      /* 图表 */
+      .charts { grid-template-columns: 1fr !important; }
+      .bars { height: 120px !important; }
+      .bar { min-width: 16px !important; }
+
+      /* 表格横向滚动 */
+      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+      table th, table td { padding: 8px 10px !important; font-size: 12px !important; }
+
+      /* 日志 */
+      .log-row { grid-template-columns: 28px 50px 1fr 60px !important; font-size: 11px !important; gap: 6px !important; }
+
+      /* 数据库管理 */
+      .db-toolbar { flex-direction: column !important; align-items: stretch !important; }
+      .db-toolbar select, .db-toolbar input { width: 100% !important; }
+
+      /* 弹窗 */
+      .modal-box { min-width: 0 !important; width: calc(100vw - 24px) !important; margin: 12px; padding: 20px 16px !important; }
+
+      /* 面板 */
+      .panel { padding: 14px !important; margin-bottom: 12px !important; }
+      .panel-title { font-size: 13px !important; flex-direction: column; gap: 2px; }
+
+      /* 用户管理/备份等 */
+      .btn { padding: 8px 14px !important; font-size: 13px !important; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+
+      /* 分页 */
+      .pagination-row { flex-wrap: wrap; justify-content: center; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 登录页 -->
+    <div class="login-overlay" v-if="!token">
+      <div class="login-box">
+        <h2>🛡️ 管理后台</h2>
+        <p class="sub">学生积分管理系统 · 管理员登录</p>
+        <div class="login-error">{{ loginError }}</div>
+        <input v-model="loginForm.username" placeholder="用户名" @keyup.enter="doLogin">
+        <input v-model="loginForm.password" type="password" placeholder="密码" @keyup.enter="doLogin">
+        <div class="captcha-row">
+          <input v-model="loginForm.captcha" placeholder="计算结果" @keyup.enter="doLogin">
+          <div class="captcha-box" @click="loadCaptcha">{{ captchaQuestion }}</div>
+        </div>
+        <button class="login-btn" @click="doLogin" :disabled="loginLoading">{{ loginLoading ? '登录中...' : '登 录' }}</button>
+      </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div v-else>
+      <!-- 移动端顶栏 -->
+      <div class="mobile-header">
+        <button @click="sidebarOpen = !sidebarOpen">☰</button>
+        <h3>🛡️ 管理后台</h3>
+        <button @click="doLogout">🚪</button>
+      </div>
+      <div class="sidebar-mask" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
+      <div class="admin-layout">
+      <div class="admin-sidebar" :class="{open: sidebarOpen}" style="position:relative">
+        <div class="sidebar-logo">
+          <h3>🛡️ 管理后台</h3>
+          <span>学生积分管理系统</span>
+        </div>
+        <div class="nav-item" :class="{ active: page === 'dashboard' }" @click="goTo('dashboard')">📊 数据总览</div>
+        <div class="nav-item" :class="{ active: page === 'users' }" @click="loadUsers(); goTo('users')">👥 用户管理</div>
+        <div class="nav-item" :class="{ active: page === 'loginLogs' }" @click="loadLoginLogs(); goTo('loginLogs')">📋 登录日志</div>
+        <div class="nav-item" :class="{ active: page === 'pointsLogs' }" @click="loadPointsLogs(); goTo('pointsLogs')">📈 积分日志</div>
+        <div class="nav-item" :class="{ active: page === 'database' }" @click="dbLoadTables(); goTo('database')">🗄️ 数据库管理</div>
+        <div class="nav-item" :class="{ active: page === 'backup' }" @click="goTo('backup')">💾 数据备份</div>
+        <div class="sidebar-footer">
+          <button @click="doLogout">🚪 退出登录</button>
+        </div>
+      </div>
+
+      <div class="admin-main">
+        <!-- 数据总览 -->
+        <div v-show="page === 'dashboard'">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <h2 style="font-size:18px; color:#f1f5f9">📊 数据总览</h2>
+            <span class="time-display">{{ currentTime }}</span>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)">👤</div><div><div class="m-value">{{ stats.overview?.user_count || 0 }}</div><div class="m-label">用户数</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#f093fb,#f5576c)">🏫</div><div><div class="m-value">{{ stats.overview?.class_count || 0 }}</div><div class="m-label">班级数</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">👥</div><div><div class="m-value">{{ stats.overview?.student_count || 0 }}</div><div class="m-label">学生数</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">⭐</div><div><div class="m-value">{{ stats.overview?.total_points || 0 }}</div><div class="m-label">总积分</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#fa709a,#fee140)">📝</div><div><div class="m-value">{{ stats.overview?.total_records || 0 }}</div><div class="m-label">积分记录</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#a18cd1,#fbc2eb)">🏆</div><div><div class="m-value">{{ stats.overview?.badge_count || 0 }}</div><div class="m-label">勋章数</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#fccb90,#d57eeb)">📈</div><div><div class="m-value">{{ stats.overview?.today_records || 0 }}</div><div class="m-label">今日记录</div></div></div>
+            <div class="metric"><div class="m-icon" style="background:linear-gradient(135deg,#e0c3fc,#8ec5fc)">🔥</div><div><div class="m-value">{{ stats.overview?.week_records || 0 }}</div><div class="m-label">本周记录</div></div></div>
+          </div>
+          <div class="charts">
+            <div class="panel">
+              <div class="panel-title"><span>📈 近7日积分趋势</span><span class="panel-sub">总计 {{ weekTotal }} 条</span></div>
+              <div class="bars">
+                <div class="bar-col" v-for="d in stats.daily_stats" :key="d.date">
+                  <div class="bar-val">{{ d.count }}</div>
+                  <div class="bar-wrap"><div class="bar-fill" :style="{ height: barPct(d.count) + '%' }"></div></div>
+                  <div class="bar-label">{{ d.date }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">🖥️ 系统信息</div>
+              <div class="info-row"><span>应用版本</span><span>{{ stats.system?.app_version }}</span></div>
+              <div class="info-row"><span>Python</span><span>{{ stats.system?.python_version }}</span></div>
+              <div class="info-row"><span>平台</span><span style="font-size:12px">{{ stats.system?.platform }}</span></div>
+              <div class="info-row"><span>数据库</span><span>PostgreSQL</span></div>
+              <div class="info-row"><span>部署</span><span>Railway</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span>🔐 最近登录</span></div>
+            <div class="log-row log-head"><span>状态</span><span>用户</span><span>IP</span><span>时间</span></div>
+            <div class="log-row" v-for="l in (stats.recent_logins || []).slice(0, 8)" :class="{ fail: !l.success }">
+              <span>{{ l.success ? '✅' : '❌' }}</span>
+              <span style="font-weight:600">{{ l.username }}</span>
+              <span style="font-family:monospace; font-size:12px">{{ l.ip_address || '-' }}</span>
+              <span style="color:#64748b; font-size:12px">{{ fmtTime(l.created_at) }}</span>
+            </div>
+            <div class="empty" v-if="!stats.recent_logins?.length">暂无记录</div>
+          </div>
+        </div>
+
+        <!-- 用户管理 -->
+        <div v-show="page === 'users'">
+          <div class="toolbar"><h2 style="font-size:18px; color:#f1f5f9">👥 用户管理</h2><button class="btn btn-primary" @click="showCreateUser = true">➕ 创建用户</button></div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>用户名</th><th>显示名称</th><th>账号有效期</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="u in users" :key="u.id">
+                <td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.display_name }}</td>
+                <td>
+                  <span v-if="u.expires_at" :style="{color: new Date(u.expires_at) < new Date() ? '#f87171' : '#34d399'}">{{ fmtTime(u.expires_at) }}</span>
+                  <span v-else style="color:#64748b;">永久</span>
+                </td>
+                <td>{{ fmtTime(u.created_at) }}</td>
+                <td>
+                  <button class="btn btn-sm btn-ghost" @click="openResetPwd(u)" style="margin-right:6px">重置密码</button>
+                  <button class="btn btn-sm btn-ghost" @click="openEditExpiry(u)" style="margin-right:6px">设有效期</button>
+                  <button class="btn btn-sm btn-danger" @click="deleteUser(u.id)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty" v-if="!users.length">暂无用户</div>
+        </div>
+
+        <!-- 登录日志 -->
+        <div v-show="page === 'loginLogs'">
+          <div class="toolbar">
+            <h2 style="font-size:18px; color:#f1f5f9">📋 登录日志</h2>
+            <div class="radio-group">
+              <button :class="{ active: logFilter === 'all' }" @click="logFilter = 'all'; loadLoginLogs()">全部</button>
+              <button :class="{ active: logFilter === 'success' }" @click="logFilter = 'success'; loadLoginLogs()">成功</button>
+              <button :class="{ active: logFilter === 'fail' }" @click="logFilter = 'fail'; loadLoginLogs()">失败</button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>用户</th><th>状态</th><th>IP</th><th>原因</th><th>时间</th></tr></thead>
+            <tbody>
+              <tr v-for="l in loginLogs" :key="l.id">
+                <td>{{ l.username }}</td>
+                <td><span class="tag" :class="l.success ? 'tag-success' : 'tag-danger'">{{ l.success ? '成功' : '失败' }}</span></td>
+                <td style="font-family:monospace; font-size:12px">{{ l.ip_address }}</td>
+                <td>{{ l.fail_reason || '-' }}</td>
+                <td>{{ fmtTime(l.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty" v-if="!loginLogs.length">暂无记录</div>
+        </div>
+
+        <!-- 积分日志 -->
+        <div v-show="page === 'pointsLogs'">
+          <h2 style="font-size:18px; color:#f1f5f9; margin-bottom:16px">📈 积分日志</h2>
+          <table class="data-table">
+            <thead><tr><th>学生ID</th><th>积分</th><th>原因</th><th>类型</th><th>时间</th></tr></thead>
+            <tbody>
+              <tr v-for="l in pointsLogs" :key="l.id">
+                <td>{{ l.student_id }}</td>
+                <td><span class="tag" :class="l.points > 0 ? 'tag-success' : 'tag-danger'">{{ l.points > 0 ? '+' : '' }}{{ l.points }}</span></td>
+                <td>{{ l.reason }}</td><td>{{ l.category }}</td><td>{{ fmtTime(l.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty" v-if="!pointsLogs.length">暂无记录</div>
+        </div>
+
+        <!-- 数据库管理 -->
+        <div v-show="page === 'database'">
+          <h3>🗄️ 数据库管理</h3>
+          <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+            <select v-model="dbActiveTable" @change="dbLoadRows(1)" style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;">
+              <option v-for="t in dbTables" :key="t.name" :value="t.name">{{ t.label }} ({{ t.name }})</option>
+            </select>
+            <input v-model="dbSearch" @keyup.enter="dbLoadRows(1)" placeholder="搜索..." style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;width:200px;" />
+            <button @click="dbLoadRows(1)" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">🔍 搜索</button>
+            <button @click="dbShowAdd()" class="btn btn-success" style="padding:8px 16px;font-size:13px;">➕ 新增</button>
+          </div>
+          <div v-if="dbRows.length === 0" style="color:#64748b;padding:20px;text-align:center;">暂无数据</div>
+          <div v-else style="overflow-x:auto;">
+            <table>
+              <thead><tr><th v-for="col in dbCurrentCols" :key="col.key">{{ col.label }}</th><th style="width:140px;">操作</th></tr></thead>
+              <tbody>
+                <tr v-for="row in dbRows" :key="row.id">
+                  <td v-for="col in dbCurrentCols" :key="col.key">
+                    <span v-if="col.type==='bool'">{{ row[col.key] ? '✅' : '❌' }}</span>
+                    <span v-else-if="col.type==='datetime'">{{ fmtTime(row[col.key]) }}</span>
+                    <span v-else style="word-break:break-all;max-width:200px;display:inline-block;">{{ row[col.key] }}</span>
+                  </td>
+                  <td>
+                    <button @click="dbShowEdit(row)" class="btn btn-primary" style="padding:4px 10px;font-size:12px;">✏️</button>
+                    <button @click="dbDeleteRow(row.id)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">🗑️</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="dbTotal > dbPageSize" style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+            <button @click="dbLoadRows(dbPage-1)" :disabled="dbPage<=1" class="btn" style="padding:6px 14px;font-size:13px;">上一页</button>
+            <span style="color:#94a3b8;line-height:32px;font-size:13px;">{{ dbPage }} / {{ Math.ceil(dbTotal/dbPageSize) }} (共{{ dbTotal }}条)</span>
+            <button @click="dbLoadRows(dbPage+1)" :disabled="dbPage>=Math.ceil(dbTotal/dbPageSize)" class="btn" style="padding:6px 14px;font-size:13px;">下一页</button>
+          </div>
+          <!-- 编辑/新增弹窗 -->
+          <div v-if="dbModal.show" class="modal-overlay" @click.self="dbModal.show=false">
+            <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto;">
+              <h3 style="margin-bottom:16px;">{{ dbModal.isNew ? '➕ 新增记录' : '✏️ 编辑记录' }}</h3>
+              <div v-for="col in dbModalCols" :key="col.key" style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">{{ col.label }} <span v-if="col.required" style="color:#f87171;">*</span></label>
+                <input v-if="col.type==='str'" v-model="dbModal.data[col.key]" :placeholder="col.label" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;" />
+                <input v-else-if="col.type==='int'||col.type==='float'" v-model.number="dbModal.data[col.key]" type="number" :step="col.type==='float'?'0.1':'1'" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;" />
+                <select v-else-if="col.type==='bool'" v-model="dbModal.data[col.key]" style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;">
+                  <option :value="true">是</option><option :value="false">否</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button @click="dbModal.show=false" class="btn" style="padding:8px 20px;">取消</button>
+                <button @click="dbSaveRow()" class="btn btn-primary" style="padding:8px 20px;">💾 保存</button>
+              </div>
+              <div v-if="dbModal.error" style="color:#f87171;font-size:13px;margin-top:8px;">{{ dbModal.error }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数据备份 -->
+        <div v-show="page === 'backup'">
+          <div class="backup-center">
+            <div class="icon">📦</div>
+            <h2 style="color:#f1f5f9; margin-bottom:8px">数据备份</h2>
+            <p>导出所有数据为 JSON 文件（用户、班级、学生、积分记录、勋章）</p>
+            <button class="btn btn-primary" @click="doBackup" :disabled="backingUp">{{ backingUp ? '导出中...' : '💾 下载备份文件' }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 创建用户弹窗 -->
+    <div class="modal-overlay" v-if="showCreateUser" @click.self="showCreateUser = false">
+      <div class="modal-box">
+        <h3>创建用户</h3>
+        <label>用户名</label><input v-model="newUser.username">
+        <label>密码</label><input v-model="newUser.password" type="password">
+        <label>显示名称</label><input v-model="newUser.display_name">
+        <div class="modal-actions"><button class="btn btn-ghost" @click="showCreateUser = false">取消</button><button class="btn btn-primary" @click="createUser">创建</button></div>
+      </div>
+    </div>
+
+    <!-- 重置密码弹窗 -->
+    <div class="modal-overlay" v-if="showResetPwd" @click.self="showResetPwd = false">
+      <div class="modal-box">
+        <h3>重置密码</h3>
+        <p style="color:#94a3b8; font-size:14px">用户：{{ resetTarget?.username }}</p>
+        <label>新密码</label><input v-model="newPassword" type="password" placeholder="至少8位">
+        <div class="modal-actions"><button class="btn btn-ghost" @click="showResetPwd = false">取消</button><button class="btn btn-primary" @click="resetPassword">确认重置</button></div>
+      </div>
+    </div>
+
+    <!-- 设置有效期弹窗 -->
+    <div class="modal-overlay" v-if="showExpiry" @click.self="showExpiry = false">
+      <div class="modal-box">
+        <h3>设置账号有效期</h3>
+        <p style="color:#94a3b8; font-size:14px">用户：{{ expiryTarget?.username }}</p>
+        <label>有效期至（留空表示永久）</label><input v-model="expiryDate" type="datetime-local">
+        <div style="margin-top:8px;">
+          <button class="btn btn-sm btn-ghost" @click="expiryDate = ''">设为永久</button>
+          <button class="btn btn-sm btn-ghost" @click="expiryDate = new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0,16)">+30天</button>
+          <button class="btn btn-sm btn-ghost" @click="expiryDate = new Date(Date.now() + 90*24*60*60*1000).toISOString().slice(0,16)">+90天</button>
+          <button class="btn btn-sm btn-ghost" @click="expiryDate = new Date(Date.now() + 365*24*60*60*1000).toISOString().slice(0,16)">+1年</button>
+        </div>
+        <div class="modal-actions"><button class="btn btn-ghost" @click="showExpiry = false">取消</button><button class="btn btn-primary" @click="saveExpiry">保存</button></div>
+      </div>
+    </div>
+  </div>
+    </div>
+
+  <script src="/admin-assets/vue.global.prod.js"></script>
+  <script src="/admin-assets/axios.min.js"></script>
+  <script src="/admin-assets/admin.js"></script>
+</body>
+</html>

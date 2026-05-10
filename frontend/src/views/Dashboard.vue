@@ -6,8 +6,8 @@
     </div>
 
     <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
+    <el-row :gutter="16" class="stats-row">
+      <el-col :xs="12" :sm="12" :md="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-icon" style="background: #eef2ff; color: #6366f1">👥</div>
           <div class="stat-info">
@@ -16,7 +16,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-icon" style="background: #fef3c7; color: #f59e0b">⭐</div>
           <div class="stat-info">
@@ -25,7 +25,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-icon" style="background: #d1fae5; color: #10b981">📈</div>
           <div class="stat-info">
@@ -34,7 +34,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :xs="12" :sm="12" :md="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-icon" style="background: #fce7f3; color: #ec4899">📝</div>
           <div class="stat-info">
@@ -50,7 +50,7 @@
       <template #header>
         <span>⚡ 快捷操作</span>
       </template>
-      <el-space wrap>
+      <div class="action-buttons">
         <el-button @click="$router.push('/students')">
           <el-icon><Plus /></el-icon> 添加学生
         </el-button>
@@ -63,7 +63,7 @@
         <el-button @click="$router.push('/badges')">
           <el-icon><Medal /></el-icon> 颁发勋章
         </el-button>
-      </el-space>
+      </div>
     </el-card>
 
     <!-- 空状态 -->
@@ -84,9 +84,9 @@ const stats = ref({ total_students: 0, total_points: 0, avg_points: 0, today_rec
 async function fetchStats() {
   if (!classStore.currentClassId) return
   try {
-    const res = await api.get('/api/leaderboard/stats', { params: { class_id: classStore.currentClassId } })
+    const res = await api.get(`/api/classes/${classStore.currentClassId}/stats`)
     stats.value = res.data
-  } catch (e) { /* ignore */ }
+  } catch (e) { /* handled */ }
 }
 
 onMounted(fetchStats)
@@ -95,14 +95,97 @@ watch(() => classStore.currentClassId, fetchStats)
 
 <style scoped>
 .dashboard { max-width: 1200px; }
-.page-header { margin-bottom: 24px; }
-.page-header h1 { margin: 0; font-size: 22px; color: #1e293b; }
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-header h1 { margin: 0; font-size: 22px; }
 .subtitle { color: #94a3b8; font-size: 14px; }
-.stats-row { margin-bottom: 24px; }
-.stat-card { border-radius: 16px; }
-.stat-card :deep(.el-card__body) { display: flex; align-items: center; gap: 16px; padding: 20px; }
-.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-.stat-value { font-size: 24px; font-weight: 700; color: #1e293b; }
-.stat-label { font-size: 13px; color: #94a3b8; }
-.quick-actions { border-radius: 16px; margin-bottom: 24px; }
+
+.stats-row {
+  margin-bottom: 20px;
+}
+
+.stats-row .el-col {
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  border-radius: 16px;
+}
+
+.stat-card :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.quick-actions {
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 手机端 */
+@media (max-width: 767px) {
+  .stat-card :deep(.el-card__body) {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    border-radius: 10px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .el-button {
+    width: 100%;
+  }
+}
 </style>

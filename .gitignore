@@ -9,7 +9,12 @@ __pycache__/
 # Node
 node_modules/
 frontend/dist/
+backend/static/
 .DS_Store
+
+# CloudBase (legacy)
+cloudfunctions/
+cloudbaserc.json
 
 # IDE
 .vscode/
@@ -19,3 +24,6 @@ frontend/dist/
 Thumbs.db
 Desktop.ini
 .vercel
+
+# Docs temp
+docs/~*.docx

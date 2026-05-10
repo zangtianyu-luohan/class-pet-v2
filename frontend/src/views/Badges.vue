@@ -2,22 +2,22 @@
   <div class="badges-page">
     <div class="page-header">
       <h1>🎖️ 勋章管理</h1>
-      <el-button type="primary" @click="showAdd = true"><el-icon><Plus /></el-icon> 创建勋章</el-button>
+      <el-button type="primary" @click="showAdd = true" :icon="Plus">创建勋章</el-button>
     </div>
 
     <!-- 勋章列表 -->
     <el-row :gutter="16">
-      <el-col :span="6" v-for="badge in badges" :key="badge.id">
+      <el-col :xs="12" :sm="8" :md="6" v-for="badge in badges" :key="badge.id">
         <el-card shadow="hover" class="badge-card">
           <div class="badge-icon">{{ badge.icon }}</div>
           <h3>{{ badge.name }}</h3>
           <p>{{ badge.description }}</p>
-          <el-space>
+          <div class="badge-actions">
             <el-button size="small" @click="openAward(badge)">🎖️ 颁发</el-button>
             <el-popconfirm title="确定删除？" @confirm="deleteBadge(badge.id)">
               <template #reference><el-button size="small" type="danger">删除</el-button></template>
             </el-popconfirm>
-          </el-space>
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -26,7 +26,9 @@
     <!-- 颁发记录 -->
     <el-card shadow="never" style="margin-top: 24px; border-radius: 16px">
       <template #header><span>📋 颁发记录</span></template>
-      <el-table :data="records" stripe v-if="records.length">
+
+      <!-- 桌面端表格 -->
+      <el-table :data="records" stripe v-if="records.length && !isMobile">
         <el-table-column label="勋章" width="80">
           <template #default="{ row }">{{ row.badge_icon }}</template>
         </el-table-column>
@@ -36,15 +38,28 @@
           <template #default="{ row }">{{ formatDate(row.awarded_at) }}</template>
         </el-table-column>
       </el-table>
+
+      <!-- 移动端卡片 -->
+      <div v-else-if="records.length && isMobile" class="record-list">
+        <div v-for="r in records" :key="r.id" class="record-item">
+          <span class="record-icon">{{ r.badge_icon }}</span>
+          <div class="record-info">
+            <span class="record-name">{{ r.badge_name }}</span>
+            <span class="record-student">{{ r.student_name }}</span>
+          </div>
+          <span class="record-time">{{ formatDate(r.awarded_at) }}</span>
+        </div>
+      </div>
+
       <el-empty v-else description="暂无颁发记录" :image-size="60" />
     </el-card>
 
     <!-- 创建勋章弹窗 -->
-    <el-dialog v-model="showAdd" title="创建勋章" width="400px">
+    <el-dialog v-model="showAdd" title="创建勋章">
       <el-form :model="addForm" label-width="60px">
         <el-form-item label="名称"><el-input v-model="addForm.name" /></el-form-item>
         <el-form-item label="图标">
-          <el-select v-model="addForm.icon">
+          <el-select v-model="addForm.icon" style="width: 100%">
             <el-option v-for="e in emojiOptions" :key="e" :label="e" :value="e" />
           </el-select>
         </el-form-item>
@@ -57,7 +72,7 @@
     </el-dialog>
 
     <!-- 颁发弹窗 -->
-    <el-dialog v-model="showAward" title="颁发勋章" width="400px">
+    <el-dialog v-model="showAward" title="颁发勋章">
       <p>勋章：<strong>{{ awardBadge?.icon }} {{ awardBadge?.name }}</strong></p>
       <el-select v-model="awardStudentId" placeholder="选择学生" style="width: 100%">
         <el-option v-for="s in students" :key="s.id" :label="`${s.name} (${s.student_no})`" :value="s.id" />
@@ -71,7 +86,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import api from '../api'
@@ -81,6 +97,8 @@ const classStore = useClassStore()
 const badges = ref([])
 const records = ref([])
 const students = ref([])
+
+const isMobile = computed(() => window.innerWidth < 768)
 
 const showAdd = ref(false)
 const addForm = ref({ name: '', icon: '🏅', description: '' })
@@ -148,10 +166,31 @@ onMounted(() => { fetchBadges(); fetchRecords(); fetchStudents() })
 
 <style scoped>
 .badges-page { max-width: 1100px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-header h1 { margin: 0; font-size: 22px; }
+
 .badge-card { text-align: center; border-radius: 16px; margin-bottom: 16px; }
+.badge-card :deep(.el-card__body) { padding: 16px; }
 .badge-icon { font-size: 40px; margin-bottom: 8px; }
-.badge-card h3 { margin: 0 0 4px; }
-.badge-card p { color: #94a3b8; font-size: 13px; margin: 0 0 12px; }
+.badge-card h3 { margin: 0 0 4px; font-size: 15px; }
+.badge-card p { color: #94a3b8; font-size: 13px; margin: 0 0 12px; min-height: 36px; }
+.badge-actions { display: flex; gap: 6px; justify-content: center; }
+
+/* 移动端记录列表 */
+.record-list { display: flex; flex-direction: column; gap: 8px; }
+.record-item {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+}
+.record-icon { font-size: 24px; flex-shrink: 0; }
+.record-info { flex: 1; min-width: 0; }
+.record-name { font-weight: 600; font-size: 14px; display: block; }
+.record-student { font-size: 12px; color: #64748b; }
+.record-time { font-size: 12px; color: #94a3b8; flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  .badge-icon { font-size: 32px; }
+  .badge-card h3 { font-size: 13px; }
+  .badge-card p { font-size: 12px; min-height: auto; }
+}
 </style>

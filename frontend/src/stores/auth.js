@@ -17,6 +17,17 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data
   }
 
+  async function loginWithCaptcha(username, password, captchaId, captchaAnswer) {
+    const res = await api.post('/api/auth/login', {
+      username, password, captcha_id: captchaId, captcha_answer: captchaAnswer
+    })
+    token.value = res.data.access_token
+    user.value = res.data.user
+    localStorage.setItem('token', token.value)
+    localStorage.setItem('user', JSON.stringify(user.value))
+    return res.data
+  }
+
   async function register(username, password, displayName) {
     const res = await api.post('/api/auth/register', {
       username,
@@ -44,5 +55,5 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data
   }
 
-  return { token, user, isLoggedIn, login, register, logout, fetchMe }
+  return { token, user, isLoggedIn, login, loginWithCaptcha, register, logout, fetchMe }
 })

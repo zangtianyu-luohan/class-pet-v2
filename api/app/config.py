@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # 应用
-    APP_NAME: str = "班级OK萌宠"
+    APP_NAME: str = "学生积分管理系统"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
 

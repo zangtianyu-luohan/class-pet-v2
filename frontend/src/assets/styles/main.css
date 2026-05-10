@@ -1,11 +1,17 @@
 /* 全局样式 */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
   background: #f5f7fa;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* Element Plus 微调 */
@@ -21,3 +27,319 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* 通用页面头部 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+/* 登录页 */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e1b4b, #312e81, #1e1b4b);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  border-radius: 20px;
+}
+
+/* 统计卡片 */
+.stat-card .stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stat-card .stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-card .stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.stat-card .stat-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.stat-card .el-card__body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 快捷操作 */
+.quick-actions .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 学生列表 */
+.student-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.15s;
+  cursor: pointer;
+}
+
+.student-card:active {
+  transform: scale(0.98);
+}
+
+/* ===== 响应式断点 ===== */
+
+/* 平板 (768px ~ 1023px) */
+@media (max-width: 1023px) {
+  .page-header h1 { font-size: 20px; }
+
+  .el-dialog {
+    width: 90% !important;
+    margin: 16px auto !important;
+  }
+}
+
+/* 手机 (< 768px) */
+@media (max-width: 767px) {
+  html { font-size: 14px; }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .page-header h1 { font-size: 18px; }
+
+  /* 弹窗 */
+  .el-dialog {
+    width: 95% !important;
+    margin: 8px auto !important;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .el-dialog__body {
+    padding: 12px 16px !important;
+  }
+
+  .el-dialog__header {
+    padding: 14px 16px 8px !important;
+  }
+
+  .el-dialog__footer {
+    padding: 8px 16px 14px !important;
+  }
+
+  /* 表格 */
+  .el-table {
+    font-size: 13px;
+  }
+
+  .el-table .el-button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  /* 表单 */
+  .el-form-item {
+    margin-bottom: 16px;
+  }
+
+  .el-form--label-top .el-form-item__label {
+    padding-bottom: 4px;
+  }
+
+  /* 卡片 */
+  .el-card__body {
+    padding: 14px;
+  }
+
+  .el-card {
+    border-radius: 14px;
+  }
+
+  /* 按钮 */
+  .el-button-group .el-button {
+    padding: 8px 12px;
+  }
+
+  .el-button + .el-button {
+    margin-left: 0;
+  }
+
+  /* 统计卡片 - 2列 */
+  .stats-row .el-col-xs-12 {
+    padding: 0 6px !important;
+  }
+
+  .stats-row {
+    margin: 0 -6px !important;
+  }
+
+  .stat-card .el-card__body {
+    padding: 12px !important;
+    gap: 10px;
+  }
+
+  .stat-card .stat-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 12px;
+  }
+
+  /* 快捷操作 - 纵向排列 */
+  .quick-actions .action-buttons {
+    flex-direction: column;
+  }
+
+  .quick-actions .action-buttons .el-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Select 下拉适配 */
+  .el-select {
+    width: 100%;
+  }
+
+  /* Drawer 移动端 */
+  .el-drawer {
+    width: 85% !important;
+  }
+
+  /* 课堂工具卡片 */
+  .tools-page .el-col-xs-12 {
+    padding: 0 6px !important;
+  }
+
+  .tool-card {
+    margin-bottom: 10px;
+  }
+
+  .tool-card .el-card__body {
+    padding: 14px 8px !important;
+  }
+
+  .tool-icon {
+    font-size: 28px !important;
+  }
+
+  .tool-card h3 {
+    font-size: 14px !important;
+  }
+
+  .tool-card p {
+    font-size: 11px !important;
+  }
+
+  /* 计时器 */
+  .timer-display {
+    font-size: 48px !important;
+  }
+
+  .timer-presets .el-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  /* 排行榜 */
+  .leaderboard-list .el-card__body {
+    padding: 12px;
+  }
+
+  /* 勋章页面 */
+  .badge-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* 学生详情 */
+  .student-detail-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  /* 分页 */
+  .el-pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .el-pagination .el-pager li {
+    min-width: 32px;
+  }
+}
+
+/* 超小屏幕 (< 480px) */
+@media (max-width: 479px) {
+  .el-card__body {
+    padding: 12px;
+  }
+
+  .el-button {
+    font-size: 13px;
+  }
+
+  .badge-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .stat-card .stat-value {
+    font-size: 16px;
+  }
+}
+
+/* 安全区适配（刘海屏） */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .el-main, .main-content, .mobile-main {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}

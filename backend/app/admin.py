@@ -164,7 +164,7 @@ def setup_admin(app):
         app=app,
         engine=engine,
         authentication_backend=authentication_backend,
-        title="🐾 班级OK萌宠 管理后台",
+        title="🐾 学生积分管理系统 管理后台",
         logo_url="/admin/statics/logo.png",
         base_url="/admin",
     )

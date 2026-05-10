@@ -1,13 +1,27 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
 
 
+def _sanitize(v: str) -> str:
+    dangerous = ["<script", "</script", "javascript:", "onerror=", "onload=", "onclick="]
+    v_lower = v.lower()
+    for d in dangerous:
+        if d in v_lower:
+            raise ValueError("包含不允许的字符")
+    return v.strip()
+
+
 class PointsAdjust(BaseModel):
     student_id: int
-    points: int = Field(..., description="正数加分，负数减分")
+    points: int = Field(..., ge=-1000, le=1000, description="正数加分，负数减分")
     reason: str = Field(..., min_length=1, max_length=200)
     category: str = "manual"
+
+    @field_validator("reason")
+    @classmethod
+    def sanitize(cls, v):
+        return _sanitize(v)
 
 
 class PointsBatchAdjust(BaseModel):
