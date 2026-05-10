@@ -144,6 +144,8 @@ const doc = new Document({
       p("XSS 过滤（学生/积分 Schema 的 field_validator）、SQL 注入防护（SQLAlchemy 参数化查询）、积分范围限制（-1000~1000）。"),
       h3("响应安全"),
       p("CSP 内容安全策略（管理后台路径放宽 unsafe-eval）、X-Content-Type-Options、X-Frame-Options、X-XSS-Protection、Referrer-Policy。全局异常处理器隐藏数据库错误细节。"),
+      h3("账号有效期控制"),
+      p("每个 API 请求都在 get_current_user 依赖中检查账号 expires_at 字段。过期账号返回 403 Forbidden，前端拦截器自动清除 token 并跳转登录页。实现了「即使不退出登录，过期后也无法继续操作」的安全策略。"),
       h2("3.4 管理后台"),
       p("管理后台完全独立于前端教师端，通过 /admin-panel 访问。使用自托管的 Vue 3 CDN 脚本，深色主题。"),
       h3("API 端点"),
@@ -205,7 +207,7 @@ const doc = new Document({
         ["≥ 1024px（桌面）", "完整侧边栏 + 主内容区"],
       ], [3000, 6026]),
       h2("4.4 课堂工具"),
-      p("Tools.vue 包含四个工具，均支持手机端使用："),
+      p("Tools.vue 包含六个工具，均支持手机端使用："),
       makeTable(["工具", "功能", "说明"], [
         ["🎲 随机点名", "公平随机抽取学生", "支持多轮不重复，动画滚动效果"],
         ["⏱️ 计时器", "课堂倒计时", "预设 1/3/5 分钟，支持暂停/重置"],
