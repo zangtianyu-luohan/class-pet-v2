@@ -29,21 +29,21 @@
     <!-- 桌面端表格 -->
     <el-table v-if="!isMobile" :data="logs" stripe style="width:100%" v-loading="loading">
       <el-table-column label="序号" width="70" type="index" />
-      <el-table-column prop="student_name" label="学生" width="120" />
-      <el-table-column label="积分变动" width="120">
+      <el-table-column prop="student_name" label="学生" />
+      <el-table-column label="积分变动">
         <template #default="{ row }">
           <el-tag :type="row.points > 0 ? 'success' : 'danger'" size="large">
             {{ row.points > 0 ? '+' : '' }}{{ row.points }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="reason" label="原因" min-width="200" />
-      <el-table-column prop="category" label="类型" width="100">
+      <el-table-column prop="reason" label="原因" />
+      <el-table-column prop="category" label="类型">
         <template #default="{ row }">
           <el-tag size="small">{{ categoryLabel(row.category) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="时间" width="180">
+      <el-table-column label="时间">
         <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
       </el-table-column>
     </el-table>
@@ -82,7 +82,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import * as XLSX from 'xlsx'
 import api from '../api'
 import { useClassStore } from '../stores/class'
 
@@ -165,6 +164,7 @@ async function exportExcel() {
       '类型': categoryLabel(l.category),
       '时间': formatTime(l.created_at),
     }))
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '积分日志')
@@ -178,7 +178,7 @@ watch(() => classStore.currentClassId, () => { page.value = 1; fetchLogs() })
 </script>
 
 <style scoped>
-.points-logs-page { max-width: 1200px; }
+.points-logs-page { width: 100%; }
 .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .page-header h1 { margin: 0; font-size: 22px; }
 .filter-card { margin-bottom: 16px; }

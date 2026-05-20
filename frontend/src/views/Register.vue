@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">
-        <div class="logo">🐾</div>
+        <div class="logo">📊</div>
         <h1>注册教师账号</h1>
         <p>创建账号，开始使用</p>
       </div>
@@ -28,8 +28,6 @@
         已有账号？
         <router-link to="/login">立即登录</router-link>
       </div>
-
-      <div class="login-pets">🐱 🐶 🐰 🐼 🐧</div>
     </div>
   </div>
 </template>
@@ -96,5 +94,4 @@ async function handleRegister() {
 .login-header p { color: #94a3b8; font-size: 14px; margin-top: 4px; }
 .login-footer { text-align: center; font-size: 14px; color: #94a3b8; }
 .login-footer a { color: #6366f1; text-decoration: none; font-weight: 500; }
-.login-pets { text-align: center; margin-top: 24px; font-size: 20px; letter-spacing: 8px; }
 </style>

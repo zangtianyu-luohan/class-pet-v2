@@ -2,7 +2,7 @@
   <div class="student-detail" v-loading="loading">
     <el-page-header @back="$router.push('/students')" :title="'返回'">
       <template #content>
-        <span style="font-size: 18px; font-weight: 600">{{ petEmoji(student?.pet_type) }} {{ student?.name }}</span>
+        <span style="font-size: 18px; font-weight: 600">{{ student?.name }}</span>
       </template>
     </el-page-header>
 
@@ -10,14 +10,11 @@
       <!-- 基本信息 -->
       <el-col :xs="24" :md="8">
         <el-card shadow="never" class="info-card">
-          <div class="pet-avatar">{{ petEmoji(student.pet_type) }}</div>
           <h2>{{ student.name }}</h2>
           <p class="student-no">学号：{{ student.student_no }}</p>
           <el-divider />
           <div class="info-grid">
-            <div><span class="label">等级</span><span class="value">Lv.{{ student.level }}</span></div>
             <div><span class="label">积分</span><span class="value" :class="student.points >= 0 ? 'positive' : 'negative'">{{ student.points }}</span></div>
-            <div><span class="label">萌宠</span><span class="value">{{ student.pet_name || '未命名' }}</span></div>
           </div>
           <el-divider />
           <el-button @click="showEdit = true" style="width: 100%">✏️ 编辑信息</el-button>
@@ -84,15 +81,6 @@
       <el-form :model="editForm" label-width="60px">
         <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
         <el-form-item label="学号"><el-input v-model="editForm.student_no" /></el-form-item>
-        <el-form-item label="萌宠">
-          <el-select v-model="editForm.pet_type" style="width: 100%">
-            <el-option label="🐱 猫咪" value="cat" />
-            <el-option label="🐶 小狗" value="dog" />
-            <el-option label="🐰 兔子" value="rabbit" />
-            <el-option label="🐼 熊猫" value="panda" />
-            <el-option label="🐧 企鹅" value="penguin" />
-          </el-select>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEdit = false">取消</el-button>
@@ -130,14 +118,12 @@ const loading = ref(true)
 const isMobile = computed(() => window.innerWidth < 768)
 
 const showEdit = ref(false)
-const editForm = reactive({ name: '', student_no: '', pet_type: 'cat' })
+const editForm = reactive({ name: '', student_no: '' })
 
 const showPoints = ref(false)
 const pointsValue = ref(5)
 const pointsReason = ref('')
 
-const petEmojis = { cat: '🐱', dog: '🐶', rabbit: '🐰', panda: '🐼', penguin: '🐧' }
-function petEmoji(type) { return petEmojis[type] || '🐱' }
 function formatDate(d) { return dayjs(d).format('MM-DD HH:mm') }
 
 async function fetchAll() {
@@ -151,7 +137,7 @@ async function fetchAll() {
     student.value = sRes.data
     logs.value = lRes.data
     badges.value = bRes.data
-    Object.assign(editForm, { name: student.value.name, student_no: student.value.student_no, pet_type: student.value.pet_type })
+    Object.assign(editForm, { name: student.value.name, student_no: student.value.student_no })
   } catch (e) { /* handled */ } finally { loading.value = false }
 }
 
@@ -180,9 +166,8 @@ onMounted(fetchAll)
 </script>
 
 <style scoped>
-.student-detail { max-width: 1100px; }
+.student-detail { width: 100%; }
 .info-card { text-align: center; border-radius: 16px; margin-bottom: 16px; }
-.pet-avatar { font-size: 64px; margin: 8px 0; }
 .info-card h2 { margin: 0; font-size: 20px; }
 .student-no { color: #94a3b8; font-size: 13px; }
 .info-grid { display: flex; justify-content: space-around; }
@@ -199,6 +184,13 @@ onMounted(fetchAll)
 }
 .log-left { flex-shrink: 0; }
 .log-center { flex: 1; min-width: 0; }
-.log-reason { font-size: 14px; color: #1e293b; font-weight: 500; }
+.log-reason { font-size: 14px; color: #1e293b; }
 .log-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+/* 移动端适配 */
+@media (max-width: 767px) {
+  .student-detail :deep(.el-card) {
+    margin-bottom: 12px;
+  }
+}
 </style>

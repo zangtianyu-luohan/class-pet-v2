@@ -39,7 +39,7 @@ const doc = new Document({
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: "学生积分管理系统", font: "Microsoft YaHei", bold: true, size: 52, color: "1E3A5F" })] }),
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "v2.0", font: "Microsoft YaHei", size: 32, color: "666666" })] }),
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 100 }, children: [new TextRun({ text: "运维手册", font: "Microsoft YaHei", bold: true, size: 36, color: "2B579A" })] }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-10", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-16", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
       pb(),
       new TableOfContents("目录", { hyperlink: true, headingStyleRange: "1-3" }),
       pb(),

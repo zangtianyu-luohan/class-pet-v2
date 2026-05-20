@@ -5,7 +5,7 @@
       <el-button text @click="drawerVisible = true" class="menu-btn">
         <el-icon size="24"><Expand /></el-icon>
       </el-button>
-      <span class="mobile-logo">🐾 学生积分管理系统</span>
+      <span class="mobile-logo">📊 学生积分管理系统</span>
       <el-select
         v-if="classStore.classes.length"
         :model-value="classStore.currentClassId"
@@ -43,7 +43,7 @@
     >
       <template #header>
         <div class="drawer-header">
-          <span class="logo-icon">🐾</span>
+          <span class="logo-icon">📊</span>
           <span class="logo-text">学生积分管理系统</span>
         </div>
       </template>
@@ -56,7 +56,7 @@
     <!-- 桌面端侧边栏 -->
     <el-aside :width="isCollapsed ? '64px' : '240px'" class="sidebar" v-if="!isMobile">
       <div class="sidebar-header" :class="{ 'sidebar-header-collapsed': isCollapsed }">
-        <span class="logo-icon">🐾</span>
+        <span class="logo-icon">📊</span>
         <span v-if="!isCollapsed" class="logo-text">学生积分管理系统</span>
         <el-button
           text
@@ -219,6 +219,9 @@ function handleCommand(cmd) {
 .app-layout {
   height: 100vh;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 /* 移动端顶栏 */
@@ -295,6 +298,14 @@ function handleCommand(cmd) {
 }
 
 /* 桌面端侧边栏 */
+:deep(.el-aside) {
+  border-right: none !important;
+}
+
+:deep(.el-main) {
+  padding: 0 !important;
+}
+
 .sidebar {
   background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
   color: #fff;
@@ -344,8 +355,17 @@ function handleCommand(cmd) {
 }
 
 .collapse-btn {
-  margin-left: auto;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   color: rgba(255,255,255,0.6) !important;
+}
+
+.sidebar-header-collapsed .collapse-btn {
+  position: static;
+  margin-left: 0;
+  transform: none;
 }
 
 .class-switcher {
@@ -375,6 +395,8 @@ function handleCommand(cmd) {
   background: #f5f7fa;
   padding: 24px;
   overflow-y: auto;
+  flex: 1;
+  min-width: 0;
 }
 
 /* 移动端主内容 */
@@ -387,6 +409,34 @@ function handleCommand(cmd) {
 @media (min-width: 768px) and (max-width: 1023px) {
   .main-content {
     padding: 16px;
+  }
+}
+</style>
+
+<style>
+/* 全局样式：覆盖 Element Plus 组件默认样式 */
+.app-layout {
+  height: 100vh;
+  overflow: hidden;
+}
+.app-layout .el-container.is-horizontal {
+  gap: 0 !important;
+}
+.app-layout .el-aside {
+  border-right: none !important;
+  overflow: visible;
+}
+.app-layout .el-main {
+  padding: 0 !important;
+  overflow: hidden;
+}
+/* 移动端：主内容区需要给顶部固定导航栏留空间 */
+@media (max-width: 767px) {
+  .app-layout .el-main {
+    padding: 16px 16px 16px 16px !important;
+    padding-top: 72px !important;
+    overflow-y: auto !important;
+    background: #f5f7fa;
   }
 }
 </style>

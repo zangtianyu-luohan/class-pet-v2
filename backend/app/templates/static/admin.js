@@ -30,6 +30,13 @@ createApp({
       loginLoading.value = true; loginError.value = ''
       try {
         const res = await axios.post('/api/auth/login', { username: loginForm.username, password: loginForm.password, captcha_id: captchaId.value, captcha_answer: loginForm.captcha })
+        // 检查是否为管理员
+        const userRes = await axios.get('/api/auth/me', { headers: { Authorization: 'Bearer ' + res.data.access_token } })
+        if (!userRes.data.is_admin) {
+          loginError.value = '该账号不是管理员，无法登录管理后台'
+          loginLoading.value = false
+          return
+        }
         token.value = res.data.access_token
         localStorage.setItem('admin_token', token.value)
         loadAll()

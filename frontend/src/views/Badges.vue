@@ -29,12 +29,12 @@
 
       <!-- 桌面端表格 -->
       <el-table :data="records" stripe v-if="records.length && !isMobile">
-        <el-table-column label="勋章" width="80">
+        <el-table-column label="勋章">
           <template #default="{ row }">{{ row.badge_icon }}</template>
         </el-table-column>
         <el-table-column prop="badge_name" label="名称" />
         <el-table-column prop="student_name" label="学生" />
-        <el-table-column prop="awarded_at" label="时间" width="170">
+        <el-table-column prop="awarded_at" label="时间">
           <template #default="{ row }">{{ formatDate(row.awarded_at) }}</template>
         </el-table-column>
       </el-table>
@@ -165,7 +165,7 @@ onMounted(() => { fetchBadges(); fetchRecords(); fetchStudents() })
 </script>
 
 <style scoped>
-.badges-page { max-width: 1100px; }
+.badges-page { width: 100%; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-header h1 { margin: 0; font-size: 22px; }
 

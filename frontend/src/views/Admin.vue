@@ -111,13 +111,13 @@
           <el-button type="primary" size="small" @click="showCreateUser = true" :icon="Plus">创建用户</el-button>
         </div>
         <el-table :data="users" stripe v-loading="loadingUsers" size="small">
-          <el-table-column prop="id" label="ID" width="60" />
+          <el-table-column prop="id" label="ID" />
           <el-table-column prop="username" label="用户名" />
           <el-table-column prop="display_name" label="显示名称" />
-          <el-table-column prop="created_at" label="创建时间" width="160">
+          <el-table-column prop="created_at" label="创建时间">
             <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="180">
+          <el-table-column label="操作" fixed="right">
             <template #default="{ row }">
               <el-button size="small" @click="openResetPwd(row)">重置密码</el-button>
               <el-popconfirm title="确定删除？" @confirm="deleteUser(row.id)">
@@ -138,15 +138,15 @@
           </el-radio-group>
         </div>
         <el-table :data="loginLogs" stripe v-loading="loadingLogs" size="small">
-          <el-table-column prop="username" label="用户" width="100" />
-          <el-table-column label="状态" width="70">
+          <el-table-column prop="username" label="用户" />
+          <el-table-column label="状态">
             <template #default="{ row }">
               <el-tag :type="row.success ? 'success' : 'danger'" size="small">{{ row.success ? '成功' : '失败' }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="ip_address" label="IP" width="130" />
+          <el-table-column prop="ip_address" label="IP" />
           <el-table-column prop="fail_reason" label="失败原因" />
-          <el-table-column prop="created_at" label="时间" width="150">
+          <el-table-column prop="created_at" label="时间">
             <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
           </el-table-column>
         </el-table>
@@ -155,15 +155,15 @@
       <!-- 积分日志 -->
       <div class="tab-content" v-show="activeTab === 'pointsLogs'">
         <el-table :data="pointsLogs" stripe v-loading="loadingPoints" size="small">
-          <el-table-column prop="student_id" label="学生ID" width="80" />
-          <el-table-column prop="points" label="积分" width="80">
+          <el-table-column prop="student_id" label="学生ID" />
+          <el-table-column prop="points" label="积分">
             <template #default="{ row }">
               <el-tag :type="row.points > 0 ? 'success' : 'danger'" size="small">{{ row.points > 0 ? '+' : '' }}{{ row.points }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="reason" label="原因" />
-          <el-table-column prop="category" label="类型" width="80" />
-          <el-table-column prop="created_at" label="时间" width="150">
+          <el-table-column prop="category" label="类型" />
+          <el-table-column prop="created_at" label="时间">
             <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
           </el-table-column>
         </el-table>

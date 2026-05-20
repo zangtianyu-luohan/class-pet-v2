@@ -68,7 +68,7 @@ async function changePassword() {
 </script>
 
 <style scoped>
-.settings-page { max-width: 700px; }
+.settings-page { width: 100%; }
 .page-header h1 { margin: 0 0 20px; font-size: 22px; }
 .settings-card { border-radius: 16px; margin-bottom: 16px; }
 </style>

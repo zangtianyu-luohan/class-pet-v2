@@ -92,7 +92,7 @@ async function deleteClass(id) {
 </script>
 
 <style scoped>
-.classes-page { max-width: 900px; }
+.classes-page { width: 100%; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-header h1 { margin: 0; font-size: 22px; }
 .class-card { border-radius: 16px; margin-bottom: 16px; }

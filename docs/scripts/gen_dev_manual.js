@@ -36,7 +36,7 @@ function coverPage() {
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "v2.0", font: "Microsoft YaHei", size: 32, color: "666666" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 100 }, children: [new TextRun({ text: "开发手册", font: "Microsoft YaHei", bold: true, size: 36, color: "2B579A" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "（含部署指南）", font: "Microsoft YaHei", size: 24, color: "888888" })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-10", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-16", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "技术栈：Vue 3 + FastAPI + PostgreSQL", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
     pb(),
   ];
@@ -126,9 +126,9 @@ const doc = new Document({
       b("  └── static/           # 前端构建产物（含 .gz 预压缩）"),
       h2("3.2 数据库模型"),
       makeTable(["表名", "模型类", "关键字段", "说明"], [
-        ["users", "User", "id, username, password_hash, display_name, expires_at", "教师账户（含账号有效期）"],
+        ["users", "User", "id, username, password_hash, display_name, expires_at, is_admin", "教师账户（含账号有效期、管理员权限）"],
         ["classes", "Class", "id, name, owner_id, is_active", "班级"],
-        ["students", "Student", "id, name, student_no, points, level, pet_type, class_id", "学生"],
+        ["students", "Student", "id, name, student_no, points, class_id", "学生"],
         ["points_logs", "PointsLog", "id, student_id, points, reason, category, operator_id", "积分记录"],
         ["points_rules", "PointsRule", "id, name, points, category, icon, owner_id", "积分规则"],
         ["badges", "Badge", "id, name, icon, description, owner_id", "勋章定义"],
@@ -146,7 +146,10 @@ const doc = new Document({
       p("CSP 内容安全策略（管理后台路径放宽 unsafe-eval）、X-Content-Type-Options、X-Frame-Options、X-XSS-Protection、Referrer-Policy。全局异常处理器隐藏数据库错误细节。"),
       h3("账号有效期控制"),
       p("每个 API 请求都在 get_current_user 依赖中检查账号 expires_at 字段。过期账号返回 403 Forbidden，前端拦截器自动清除 token 并跳转登录页。实现了「即使不退出登录，过期后也无法继续操作」的安全策略。"),
-      h2("3.4 管理后台"),
+      h2("3.4 前端界面优化"),
+      h3("表格列平均分布"),
+      p("所有数据表格移除固定列宽，采用自动平均分布布局。管理后台（admin.html）的 HTML 表格使用 table-layout: fixed 强制平均分配。教师端 Element Plus 表格删除所有 width 属性，由浏览器自动计算列宽。"),
+      h2("3.5 管理后台"),
       p("管理后台完全独立于前端教师端，通过 /admin-panel 访问。使用自托管的 Vue 3 CDN 脚本，深色主题。"),
       h3("API 端点"),
       makeTable(["方法", "路径", "说明"], [

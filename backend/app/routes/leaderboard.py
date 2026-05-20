@@ -18,8 +18,6 @@ class LeaderboardEntry(BaseModel):
     student_id: int
     student_no: str
     name: str
-    pet_type: str
-    level: int
     points: int
     week_points: int = 0
 
@@ -99,8 +97,6 @@ async def points_leaderboard(
             student_id=s.id,
             student_no=s.student_no,
             name=s.name,
-            pet_type=s.pet_type,
-            level=s.level,
             points=s.points,
             week_points=week_pts,
         ))
@@ -126,8 +122,6 @@ async def week_leaderboard(
             Student.id,
             Student.student_no,
             Student.name,
-            Student.pet_type,
-            Student.level,
             Student.points,
             func.coalesce(func.sum(PointsLog.points), 0).label("week_pts"),
         )
@@ -145,8 +139,6 @@ async def week_leaderboard(
             student_id=row.id,
             student_no=row.student_no,
             name=row.name,
-            pet_type=row.pet_type,
-            level=row.level,
             points=row.points,
             week_points=row.week_pts,
         ))

@@ -75,18 +75,14 @@ class StudentAdmin(ModelView, model=Student):
     name = "学生"
     name_plural = "学生管理"
     icon = "fa-solid fa-users"
-    column_list = [Student.id, Student.student_no, Student.name, Student.pet_type, Student.points, Student.level, Student.class_id]
+    column_list = [Student.id, Student.student_no, Student.name, Student.points, Student.class_id]
     column_searchable_list = [Student.name, Student.student_no]
-    column_sortable_list = [Student.points, Student.level, Student.name]
+    column_sortable_list = [Student.points, Student.name]
     column_labels = {
         Student.id: "ID",
         Student.student_no: "学号",
         Student.name: "姓名",
-        Student.pet_type: "萌宠类型",
-        Student.pet_name: "萌宠名称",
         Student.points: "积分",
-        Student.level: "等级",
-        Student.experience: "经验值",
         Student.class_id: "班级ID",
     }
 
@@ -164,7 +160,7 @@ def setup_admin(app):
         app=app,
         engine=engine,
         authentication_backend=authentication_backend,
-        title="🐾 学生积分管理系统 管理后台",
+        title="📊 学生积分管理系统 管理后台",
         logo_url="/admin/statics/logo.png",
         base_url="/admin",
     )

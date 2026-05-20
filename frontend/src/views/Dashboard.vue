@@ -94,7 +94,7 @@ watch(() => classStore.currentClassId, fetchStats)
 </script>
 
 <style scoped>
-.dashboard { max-width: 1200px; }
+.dashboard { width: 100%; }
 
 .page-header {
   display: flex;
@@ -156,6 +156,11 @@ watch(() => classStore.currentClassId, fetchStats)
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.action-buttons .el-button {
+  flex: 1;
+  min-width: 120px;
 }
 
 /* 手机端 */

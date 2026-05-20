@@ -2,9 +2,9 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">
-        <div class="logo">🐾</div>
+        <div class="logo">📊</div>
         <h1>学生积分管理系统</h1>
-        <p>趣味班级积分管理系统</p>
+        <p>班级积分 · 课堂工具 · 成长激励</p>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
@@ -53,8 +53,6 @@
           </el-button>
         </el-form-item>
       </el-form>
-
-      <div class="login-pets">🐱 🐶 🐰 🐼 🐧</div>
     </div>
   </div>
 </template>
@@ -213,13 +211,6 @@ onMounted(refreshCaptcha)
 
 .captcha-box:hover {
   border-color: #6366f1;
-}
-
-.login-pets {
-  text-align: center;
-  margin-top: 24px;
-  font-size: 20px;
-  letter-spacing: 8px;
 }
 
 @media (max-width: 767px) {

@@ -4,13 +4,14 @@
 - 用户管理
 - 登录日志
 - 操作日志
-- 系统配置
+- 数据库可视化CRUD
 """
 import platform
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text, inspect as sa_inspect
+from sqlalchemy import select, func, or_, text, inspect as sa_inspect
 from ..database import get_db, engine
 from ..models.user import User
 from ..models.class_ import Class
@@ -33,15 +34,14 @@ TABLE_MODELS = {
     "login_logs": LoginLog,
 }
 
-# 每张表的列定义（名称、类型、是否可编辑、是否必填、备注）
+# 每张表的列定义
 TABLE_COLUMNS = {
     "users": [
         {"key": "id", "label": "ID", "type": "int", "editable": False, "required": False},
         {"key": "username", "label": "用户名", "type": "str", "editable": True, "required": True},
-        {"key": "password_hash", "label": "密码哈希", "type": "str", "editable": False, "required": False},
         {"key": "display_name", "label": "显示名称", "type": "str", "editable": True, "required": True},
-        {"key": "avatar", "label": "头像", "type": "str", "editable": True, "required": False},
-        {"key": "expires_at", "label": "账号有效期", "type": "datetime", "editable": True, "required": False, "comment": "留空表示永久"},
+        {"key": "is_admin", "label": "管理员", "type": "bool", "editable": True, "required": False},
+        {"key": "expires_at", "label": "有效期", "type": "datetime", "editable": True, "required": False, "comment": "留空表示永久"},
         {"key": "created_at", "label": "创建时间", "type": "datetime", "editable": False, "required": False},
     ],
     "classes": [
@@ -56,12 +56,7 @@ TABLE_COLUMNS = {
         {"key": "id", "label": "ID", "type": "int", "editable": False, "required": False},
         {"key": "student_no", "label": "学号", "type": "str", "editable": True, "required": True},
         {"key": "name", "label": "姓名", "type": "str", "editable": True, "required": True},
-        {"key": "avatar", "label": "头像", "type": "str", "editable": True, "required": False},
-        {"key": "pet_type", "label": "宠物类型", "type": "str", "editable": True, "required": False},
-        {"key": "pet_name", "label": "宠物名", "type": "str", "editable": True, "required": False},
         {"key": "points", "label": "积分", "type": "int", "editable": True, "required": False},
-        {"key": "level", "label": "等级", "type": "int", "editable": True, "required": False},
-        {"key": "experience", "label": "经验值", "type": "float", "editable": True, "required": False},
         {"key": "class_id", "label": "班级ID", "type": "int", "editable": True, "required": True},
         {"key": "created_at", "label": "创建时间", "type": "datetime", "editable": False, "required": False},
     ],
@@ -114,7 +109,7 @@ HIDDEN_FIELDS = {"password_hash"}
 
 
 def _serialize_row(row, columns):
-    """将 ORM 对象序列化为 dict"""
+    """将ORM对象序列化为dict"""
     data = {}
     for col in columns:
         key = col["key"]
@@ -128,11 +123,14 @@ def _serialize_row(row, columns):
             data[key] = val
     return data
 
+
 router = APIRouter(prefix="/api/admin", tags=["管理后台"])
 
 
 def _require_admin(user: User = Depends(get_current_user)) -> User:
-    """当前仅一个用户，直接放行；后续可加 is_admin 字段"""
+    """校验管理员权限"""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="需要管理员权限")
     return user
 
 
@@ -146,7 +144,6 @@ async def system_stats(
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - timedelta(days=now.weekday())
 
-    # 基础统计
     user_count = (await db.execute(select(func.count(User.id)))).scalar() or 0
     class_count = (await db.execute(select(func.count(Class.id)))).scalar() or 0
     student_count = (await db.execute(select(func.count(Student.id)))).scalar() or 0
@@ -154,12 +151,10 @@ async def system_stats(
     total_points = (await db.execute(select(func.coalesce(func.sum(Student.points), 0)))).scalar()
     total_records = (await db.execute(select(func.count(PointsLog.id)))).scalar() or 0
 
-    # 今日统计
     today_records = (await db.execute(
         select(func.count(PointsLog.id)).where(PointsLog.created_at >= today_start)
     )).scalar() or 0
 
-    # 本周统计
     week_records = (await db.execute(
         select(func.count(PointsLog.id)).where(PointsLog.created_at >= week_start)
     )).scalar() or 0
@@ -225,6 +220,7 @@ async def list_users(
             "id": u.id,
             "username": u.username,
             "display_name": u.display_name,
+            "is_admin": u.is_admin,
             "avatar": u.avatar,
             "expires_at": u.expires_at.isoformat() if u.expires_at else None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -319,7 +315,6 @@ async def update_user_expiry(
 
     expires_at_str = data.get("expires_at")
     if expires_at_str:
-        from datetime import datetime
         try:
             target.expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
         except ValueError:
@@ -389,32 +384,25 @@ async def manual_backup(
     user: User = Depends(_require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """手动备份（导出关键数据为 JSON）"""
+    """手动备份（导出关键数据为JSON）"""
     import json
-    from fastapi.responses import Response
 
     data = {}
-
-    # 用户
     users = (await db.execute(select(User))).scalars().all()
-    data["users"] = [{"id": u.id, "username": u.username, "display_name": u.display_name, "created_at": u.created_at.isoformat() if u.created_at else None} for u in users]
+    data["users"] = [{"id": u.id, "username": u.username, "display_name": u.display_name, "is_admin": u.is_admin, "created_at": u.created_at.isoformat() if u.created_at else None} for u in users]
 
-    # 班级
     classes = (await db.execute(select(Class))).scalars().all()
     data["classes"] = [{"id": c.id, "name": c.name, "description": c.description, "owner_id": c.owner_id} for c in classes]
 
-    # 学生
     students = (await db.execute(select(Student))).scalars().all()
     data["students"] = [
-        {"id": s.id, "student_no": s.student_no, "name": s.name, "pet_type": s.pet_type, "pet_name": s.pet_name, "points": s.points, "level": s.level, "class_id": s.class_id}
+        {"id": s.id, "student_no": s.student_no, "name": s.name, "points": s.points, "class_id": s.class_id}
         for s in students
     ]
 
-    # 积分记录
     logs = (await db.execute(select(PointsLog))).scalars().all()
     data["points_logs"] = [{"id": l.id, "student_id": l.student_id, "points": l.points, "reason": l.reason, "category": l.category, "created_at": l.created_at.isoformat() if l.created_at else None} for l in logs]
 
-    # 勋章
     badges = (await db.execute(select(Badge))).scalars().all()
     data["badges"] = [{"id": b.id, "name": b.name, "icon": b.icon, "description": b.description} for b in badges]
 
@@ -428,9 +416,19 @@ async def manual_backup(
     )
 
 
-# ──────────────────────────────────────────────
 # 数据库可视化 CRUD API
-# ──────────────────────────────────────────────
+
+TABLE_LABELS = {
+    "users": "用户",
+    "classes": "班级",
+    "students": "学生",
+    "points_logs": "积分记录",
+    "points_rules": "积分规则",
+    "badges": "勋章",
+    "student_badges": "学生勋章",
+    "login_logs": "登录日志",
+}
+
 
 @router.get("/db/tables")
 async def list_tables(user: User = Depends(_require_admin)):
@@ -439,16 +437,7 @@ async def list_tables(user: User = Depends(_require_admin)):
     for name, cols in TABLE_COLUMNS.items():
         tables.append({
             "name": name,
-            "label": {
-                "users": "用户表",
-                "classes": "班级表",
-                "students": "学生表",
-                "points_logs": "积分记录表",
-                "points_rules": "积分规则表",
-                "badges": "勋章表",
-                "student_badges": "学生勋章表",
-                "login_logs": "登录日志表",
-            }.get(name, name),
+            "label": TABLE_LABELS.get(name, name),
             "columns": [c for c in cols if c["key"] not in HIDDEN_FIELDS],
         })
     return tables
@@ -470,13 +459,11 @@ async def db_list_rows(
     model = TABLE_MODELS[table_name]
     columns = TABLE_COLUMNS[table_name]
 
-    # 构建查询
     query = select(model)
     count_query = select(func.count()).select_from(model)
 
-    # 搜索：对所有 str 类型字段做 LIKE
+    # 搜索：对所有str类型字段做LIKE
     if search:
-        from sqlalchemy import or_
         conditions = []
         for col in columns:
             if col["type"] == "str" and col["key"] not in HIDDEN_FIELDS:
@@ -487,10 +474,7 @@ async def db_list_rows(
             query = query.where(or_(*conditions))
             count_query = count_query.where(or_(*conditions))
 
-    # 总数
     total = (await db.execute(count_query)).scalar() or 0
-
-    # 分页（默认按 id 倒序）
     query = query.order_by(model.id.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     rows = result.scalars().all()
@@ -517,7 +501,6 @@ async def db_create_row(
     model = TABLE_MODELS[table_name]
     columns = {c["key"]: c for c in TABLE_COLUMNS[table_name]}
 
-    # 只接受可编辑字段
     kwargs = {}
     for key, col in columns.items():
         if key in ("id",) or not col.get("editable", True):

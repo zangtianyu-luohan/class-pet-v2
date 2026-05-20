@@ -27,7 +27,7 @@
     .login-error { color: #f87171; font-size: 13px; text-align: center; margin-bottom: 8px; min-height: 20px; }
 
     .admin-layout { display: flex; min-height: 100vh; }
-    .admin-sidebar { width: 220px; background: linear-gradient(180deg, #1e1b4b, #0f172a); border-right: 1px solid #1e293b; padding: 20px 0; flex-shrink: 0; }
+    .admin-sidebar { width: 220px; background: linear-gradient(180deg, #1e1b4b, #0f172a); border-right: 1px solid #1e293b; padding: 20px 0; flex-shrink: 0; position: relative; }
     .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid #1e293b; margin-bottom: 12px; }
     .sidebar-logo h3 { font-size: 16px; color: #f1f5f9; }
     .sidebar-logo span { font-size: 12px; color: #64748b; }
@@ -37,7 +37,12 @@
     .sidebar-footer { position: absolute; bottom: 0; width: 220px; padding: 16px 20px; border-top: 1px solid #1e293b; }
     .sidebar-footer button { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; }
 
-    .admin-main { flex: 1; padding: 24px; overflow-y: auto; }
+    .admin-main { flex: 1; padding: 24px; overflow-y: auto; width: 0; min-width: 0; }
+    .admin-main table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .admin-main table th, .admin-main table td { padding: 8px 12px; font-size: 13px; text-align: left; }
+    .admin-main table th { color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
+    .admin-main table td { border-bottom: 1px solid #1e293b; }
+    .admin-main table tr:hover td { background: rgba(255,255,255,0.02); }
 
     .metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
     .metric { background: #1e293b; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; border: 1px solid #334155; transition: transform 0.2s; }
@@ -67,7 +72,7 @@
     .log-row.fail { background: rgba(239,68,68,0.06); border-radius: 6px; padding: 7px 8px; }
     .log-head { color: #64748b; font-size: 12px; border-bottom: 1px solid #334155; }
 
-    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     .data-table th { text-align: left; padding: 10px 12px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
     .data-table td { padding: 10px 12px; border-bottom: 1px solid #1e293b; }
     .data-table tr:hover td { background: rgba(255,255,255,0.02); }
@@ -146,9 +151,9 @@
       .bars { height: 120px !important; }
       .bar { min-width: 16px !important; }
 
-      /* 表格横向滚动 */
-      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-      table th, table td { padding: 8px 10px !important; font-size: 12px !important; }
+      /* 表格横向滚动（非数据库管理的表格） */
+      .admin-main > div:not([v-show]) table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+      .admin-main > div:not([v-show]) table th, .admin-main > div:not([v-show]) table td { padding: 8px 10px !important; font-size: 12px !important; }
 
       /* 日志 */
       .log-row { grid-template-columns: 28px 50px 1fr 60px !important; font-size: 11px !important; gap: 6px !important; }
@@ -156,6 +161,10 @@
       /* 数据库管理 */
       .db-toolbar { flex-direction: column !important; align-items: stretch !important; }
       .db-toolbar select, .db-toolbar input { width: 100% !important; }
+      .db-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
+      .db-table-wrap table { min-width: 500px; }
+      .db-table-wrap th, .db-table-wrap td { padding: 6px 8px !important; font-size: 12px !important; }
+      .db-table-wrap th.hide-mobile, .db-table-wrap td.hide-mobile { display: none !important; }
 
       /* 弹窗 */
       .modal-box { min-width: 0 !important; width: calc(100vw - 24px) !important; margin: 12px; padding: 20px 16px !important; }
@@ -196,14 +205,14 @@
       <!-- 移动端顶栏 -->
       <div class="mobile-header">
         <button @click="sidebarOpen = !sidebarOpen">☰</button>
-        <h3>🛡️ 管理后台</h3>
-        <button @click="doLogout">🚪</button>
+        <h3>管理后台</h3>
+        <button @click="doLogout" title="退出登录">🚪</button>
       </div>
       <div class="sidebar-mask" :class="{open: sidebarOpen}" @click="sidebarOpen = false"></div>
       <div class="admin-layout">
-      <div class="admin-sidebar" :class="{open: sidebarOpen}" style="position:relative">
+      <div class="admin-sidebar" :class="{open: sidebarOpen}">
         <div class="sidebar-logo">
-          <h3>🛡️ 管理后台</h3>
+          <h3>管理后台</h3>
           <span>学生积分管理系统</span>
         </div>
         <div class="nav-item" :class="{ active: page === 'dashboard' }" @click="goTo('dashboard')">📊 数据总览</div>
@@ -334,29 +343,33 @@
 
         <!-- 数据库管理 -->
         <div v-show="page === 'database'">
-          <h3>🗄️ 数据库管理</h3>
-          <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+          <h3 style="margin-bottom:4px;">🗄️ 数据库管理</h3>
+          <p style="color:#64748b;font-size:12px;margin-bottom:12px;">共 {{ dbTotal }} 条记录 · {{ dbCurrentCols.length }} 个字段</p>
+          <div class="db-toolbar" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <select v-model="dbActiveTable" @change="dbLoadRows(1)" style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;">
               <option v-for="t in dbTables" :key="t.name" :value="t.name">{{ t.label }} ({{ t.name }})</option>
             </select>
-            <input v-model="dbSearch" @keyup.enter="dbLoadRows(1)" placeholder="搜索..." style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;width:200px;" />
+            <input v-model="dbSearch" @keyup.enter="dbLoadRows(1)" placeholder="搜索..." style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;flex:1;min-width:120px;" />
             <button @click="dbLoadRows(1)" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">🔍 搜索</button>
             <button @click="dbShowAdd()" class="btn btn-success" style="padding:8px 16px;font-size:13px;">➕ 新增</button>
           </div>
-          <div v-if="dbRows.length === 0" style="color:#64748b;padding:20px;text-align:center;">暂无数据</div>
-          <div v-else style="overflow-x:auto;">
+          <div v-if="dbRows.length === 0" style="color:#64748b;padding:30px;text-align:center;">📭 暂无数据</div>
+          <div v-else class="db-table-wrap">
             <table>
-              <thead><tr><th v-for="col in dbCurrentCols" :key="col.key">{{ col.label }}</th><th style="width:140px;">操作</th></tr></thead>
+              <thead><tr>
+                <th v-for="(col, idx) in dbCurrentCols" :key="col.key" :class="{'hide-mobile': idx > 3 && dbCurrentCols.length > 5}">{{ col.label }}</th>
+                <th style="width:100px;position:sticky;right:0;background:#1e293b;">操作</th>
+              </tr></thead>
               <tbody>
                 <tr v-for="row in dbRows" :key="row.id">
-                  <td v-for="col in dbCurrentCols" :key="col.key">
+                  <td v-for="(col, idx) in dbCurrentCols" :key="col.key" :class="{'hide-mobile': idx > 3 && dbCurrentCols.length > 5}">
                     <span v-if="col.type==='bool'">{{ row[col.key] ? '✅' : '❌' }}</span>
-                    <span v-else-if="col.type==='datetime'">{{ fmtTime(row[col.key]) }}</span>
-                    <span v-else style="word-break:break-all;max-width:200px;display:inline-block;">{{ row[col.key] }}</span>
+                    <span v-else-if="col.type==='datetime'" style="white-space:nowrap;">{{ fmtTime(row[col.key]) }}</span>
+                    <span v-else style="word-break:break-all;max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;">{{ row[col.key] }}</span>
                   </td>
-                  <td>
-                    <button @click="dbShowEdit(row)" class="btn btn-primary" style="padding:4px 10px;font-size:12px;">✏️</button>
-                    <button @click="dbDeleteRow(row.id)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">🗑️</button>
+                  <td style="position:sticky;right:0;background:#1e293b;white-space:nowrap;">
+                    <button @click="dbShowEdit(row)" class="btn btn-primary" style="padding:4px 8px;font-size:12px;">✏️</button>
+                    <button @click="dbDeleteRow(row.id)" class="btn btn-danger" style="padding:4px 8px;font-size:12px;">🗑️</button>
                   </td>
                 </tr>
               </tbody>

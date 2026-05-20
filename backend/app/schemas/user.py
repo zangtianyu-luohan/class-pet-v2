@@ -66,6 +66,7 @@ class UserOut(BaseModel):
     id: int
     username: str
     display_name: str
+    is_admin: bool = False
     avatar: Optional[str] = ""
     expires_at: Optional[datetime] = None
     created_at: datetime

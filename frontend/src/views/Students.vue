@@ -10,35 +10,26 @@
       </div>
     </div>
 
-    <el-card shadow="never" class="filter-card">
-      <div class="filter-row">
-        <el-input v-model="search" placeholder="搜索姓名或学号" :prefix-icon="Search" clearable style="flex:1; min-width: 160px" @input="fetchStudents" />
-        <el-select v-model="sortBy" style="width: 120px" @change="fetchStudents">
-          <el-option label="按积分" value="points" />
-          <el-option label="按姓名" value="name" />
-          <el-option label="按等级" value="level" />
-        </el-select>
-      </div>
-    </el-card>
+    <div class="filter-row">
+      <el-input v-model="search" placeholder="搜索姓名或学号" :prefix-icon="Search" clearable class="search-input" @input="fetchStudents" />
+      <el-select v-model="sortBy" class="sort-select" @change="fetchStudents">
+        <el-option label="按积分" value="points" />
+        <el-option label="按姓名" value="name" />
+      </el-select>
+    </div>
 
     <!-- 桌面端表格 -->
-    <el-table v-if="!isMobile" :data="students" stripe style="width: 100%" v-loading="loading" @selection-change="onSelect">
+    <el-table v-if="!isMobile" :data="students" stripe style="width: 100%" v-loading="loading" @selection-change="onSelect" empty-text="暂无学生数据，点击上方「添加学生」开始">
       <el-table-column type="selection" width="50" />
       <el-table-column label="序号" width="70" type="index" />
-      <el-table-column prop="student_no" label="学号" width="100" />
-      <el-table-column prop="name" label="姓名" width="100" />
-      <el-table-column label="萌宠" width="80">
-        <template #default="{ row }">{{ petEmoji(row.pet_type) }}</template>
-      </el-table-column>
-      <el-table-column prop="level" label="等级" width="80">
-        <template #default="{ row }">Lv.{{ row.level }}</template>
-      </el-table-column>
-      <el-table-column prop="points" label="积分" width="100" sortable>
+      <el-table-column prop="student_no" label="学号" />
+      <el-table-column prop="name" label="姓名" />
+      <el-table-column prop="points" label="积分" sortable>
         <template #default="{ row }">
           <el-tag :type="row.points >= 0 ? 'success' : 'danger'">{{ row.points }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" min-width="260" fixed="right">
+      <el-table-column label="操作" fixed="right">
         <template #default="{ row }">
           <el-button-group>
             <el-button size="small" type="success" @click="openPoints(row, 5)">+5</el-button>
@@ -68,10 +59,9 @@
       <div v-for="student in students" :key="student.id" class="student-card">
         <div class="card-left">
           <el-checkbox :model-value="selected.includes(student)" @change="toggleSelect(student)" />
-          <div class="student-avatar">{{ petEmoji(student.pet_type) }}</div>
           <div class="student-info">
             <div class="student-name">{{ student.name }}</div>
-            <div class="student-meta">{{ student.student_no }} · Lv.{{ student.level }}</div>
+            <div class="student-meta">{{ student.student_no }}</div>
           </div>
         </div>
         <div class="card-right">
@@ -91,22 +81,11 @@
       </div>
     </div>
 
-    <el-empty v-if="!loading && students.length === 0" description="暂无学生" />
-
     <!-- 添加学生弹窗 -->
     <el-dialog v-model="showAdd" title="添加学生">
       <el-form :model="addForm" label-width="60px">
         <el-form-item label="学号"><el-input v-model="addForm.student_no" /></el-form-item>
         <el-form-item label="姓名"><el-input v-model="addForm.name" /></el-form-item>
-        <el-form-item label="萌宠">
-          <el-select v-model="addForm.pet_type" style="width: 100%">
-            <el-option label="🐱 猫咪" value="cat" />
-            <el-option label="🐶 小狗" value="dog" />
-            <el-option label="🐰 兔子" value="rabbit" />
-            <el-option label="🐼 熊猫" value="panda" />
-            <el-option label="🐧 企鹅" value="penguin" />
-          </el-select>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showAdd = false">取消</el-button>
@@ -147,14 +126,11 @@
           </div>
           <div v-if="excelPreview.length" style="margin-top:12px;">
             <div style="font-size:13px;color:#10b981;margin-bottom:8px;">
-              ✅ 识别到 {{ excelPreview.length }} 名学生（自动匹配：学号/姓名/萌宠类型）
+              ✅ 识别到 {{ excelPreview.length }} 名学生（自动匹配：学号/姓名）
             </div>
             <el-table :data="excelPreview.slice(0, 10)" size="small" stripe max-height="250">
               <el-table-column prop="student_no" label="学号" width="80" />
               <el-table-column prop="name" label="姓名" width="100" />
-              <el-table-column prop="pet_type" label="萌宠" width="80">
-                <template #default="{ row }">{{ petEmoji(row.pet_type) }}</template>
-              </el-table-column>
             </el-table>
             <div v-if="excelPreview.length > 10" style="font-size:12px;color:#64748b;margin-top:4px;">
               ...还有 {{ excelPreview.length - 10 }} 名学生
@@ -165,8 +141,8 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="📝 文本导入" name="text">
-          <p style="color: #94a3b8; font-size: 13px">每行一个学生，格式：学号,姓名,萌宠类型(cat/dog/rabbit/panda/penguin)</p>
-          <el-input v-model="batchText" type="textarea" :rows="6" placeholder="01,张三,cat&#10;02,李四,dog" style="margin-top: 8px" />
+          <p style="color: #94a3b8; font-size: 13px">每行一个学生，格式：学号,姓名</p>
+          <el-input v-model="batchText" type="textarea" :rows="6" placeholder="01,张三&#10;02,李四" style="margin-top: 8px" />
         </el-tab-pane>
       </el-tabs>
       <template #footer>
@@ -183,7 +159,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search, Plus, Document, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import * as XLSX from 'xlsx'
 import api from '../api'
 import { useClassStore } from '../stores/class'
 
@@ -198,7 +173,7 @@ const selectAll = ref(false)
 const isMobile = computed(() => window.innerWidth < 768)
 
 const showAdd = ref(false)
-const addForm = ref({ student_no: '', name: '', pet_type: 'cat' })
+const addForm = ref({ student_no: '', name: '' })
 
 const showPoints = ref(false)
 const pointsTarget = ref(null)
@@ -215,11 +190,6 @@ const batchTab = ref('excel')
 const excelFileName = ref('')
 const excelPreview = ref([])
 const excelErrors = ref([])
-
-const petEmojis = { cat: '🐱', dog: '🐶', rabbit: '🐰', panda: '🐼', penguin: '🐧' }
-const petLabels = { cat: '猫', dog: '狗', rabbit: '兔', panda: '熊猫', penguin: '企鹅' }
-function petEmoji(type) { return petEmojis[type] || '🐱' }
-function petLabel(type) { return petLabels[type] || type || '猫' }
 
 function onSelect(rows) {
   selected.value = rows
@@ -256,7 +226,7 @@ async function addStudent() {
     await api.post('/api/students/', addForm.value, { params: { class_id: classStore.currentClassId } })
     ElMessage.success('添加成功')
     showAdd.value = false
-    addForm.value = { student_no: '', name: '', pet_type: 'cat' }
+    addForm.value = { student_no: '', name: '' }
     fetchStudents()
   } catch (e) { /* handled */ }
 }
@@ -308,8 +278,8 @@ async function submitBatchPoints() {
 async function importBatch() {
   const lines = batchText.value.trim().split('\n').filter(l => l.trim())
   const studentsList = lines.map(line => {
-    const [student_no, name, pet_type] = line.split(',').map(s => s.trim())
-    return { student_no, name, pet_type: pet_type || 'cat' }
+    const [student_no, name] = line.split(',').map(s => s.trim())
+    return { student_no, name }
   }).filter(s => s.student_no && s.name)
 
   if (!studentsList.length) { ElMessage.warning('没有有效数据'); return }
@@ -323,19 +293,11 @@ async function importBatch() {
 }
 
 // ===== Excel 导入 =====
-const petTypeMap = {
-  '猫': 'cat', '猫咪': 'cat', 'cat': 'cat',
-  '狗': 'dog', '小狗': 'dog', 'dog': 'dog',
-  '兔': 'rabbit', '兔子': 'rabbit', 'rabbit': 'rabbit',
-  '熊猫': 'panda', 'panda': 'panda',
-  '企鹅': 'penguin', 'penguin': 'penguin',
-}
 
 // 自动识别列名映射
 const colAliases = {
   student_no: ['学号', '编号', 'no', 'no.', 'number', '序号', 'id', '学生编号', '学生学号'],
   name: ['姓名', '名字', 'name', '学生姓名', '学生名字', '名称'],
-  pet_type: ['萌宠', '宠物', '宠物类型', 'pet', 'pet_type', 'pettype', '类型'],
 }
 
 function matchColumn(headers, field) {
@@ -361,8 +323,9 @@ function onExcelFileChange(e) {
   excelPreview.value = []
 
   const reader = new FileReader()
-  reader.onload = (evt) => {
+  reader.onload = async (evt) => {
     try {
+      const XLSX = await import('xlsx')
       const data = new Uint8Array(evt.target.result)
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
@@ -385,8 +348,8 @@ function onExcelFileChange(e) {
         const noIdx = matchColumn(jsonData[0], 'student_no')
         const nameIdx = matchColumn(jsonData[0], 'name')
         if (noIdx < 0 && nameIdx < 0) {
-          // 按默认位置：第1列学号，第2列姓名，第3列萌宠
-          headerRow = ['学号', '姓名', '萌宠类型']
+          // 按默认位置：第1列学号，第2列姓名
+          headerRow = ['学号', '姓名']
           dataStart = 0
         } else {
           headerRow = jsonData[0]
@@ -396,7 +359,6 @@ function onExcelFileChange(e) {
 
       const noIdx = matchColumn(headerRow, 'student_no')
       const nameIdx = matchColumn(headerRow, 'name')
-      const petIdx = matchColumn(headerRow, 'pet_type')
 
       if (noIdx < 0 && nameIdx < 0) {
         // 按位置兜底
@@ -406,10 +368,8 @@ function onExcelFileChange(e) {
           if (!row || !row.length) continue
           const student_no = String(row[0] || '').trim()
           const name = String(row[1] || '').trim()
-          const rawPet = String(row[2] || '').trim().toLowerCase()
-          const pet_type = petTypeMap[rawPet] || 'cat'
           if (student_no && name) {
-            students.push({ student_no, name, pet_type })
+            students.push({ student_no, name })
           }
         }
         excelPreview.value = students
@@ -425,13 +385,11 @@ function onExcelFileChange(e) {
 
         const student_no = noIdx >= 0 ? String(row[noIdx] || '').trim() : ''
         const name = nameIdx >= 0 ? String(row[nameIdx] || '').trim() : ''
-        const rawPet = petIdx >= 0 ? String(row[petIdx] || '').trim().toLowerCase() : 'cat'
-        const pet_type = petTypeMap[rawPet] || 'cat'
 
         if (!student_no && !name) continue
         if (!student_no) { errors.push(`第${i + 1}行：缺少学号`); continue }
         if (!name) { errors.push(`第${i + 1}行：缺少姓名`); continue }
-        students.push({ student_no, name, pet_type })
+        students.push({ student_no, name })
       }
 
       excelPreview.value = students
@@ -460,14 +418,12 @@ async function importExcel() {
 }
 
 // ===== Excel 导出 =====
-function exportStudentsExcel() {
+async function exportStudentsExcel() {
+  const XLSX = await import('xlsx')
   const exportData = students.value.map((s, i) => ({
     '序号': i + 1,
     '学号': s.student_no,
     '姓名': s.name,
-    '萌宠类型': petLabel(s.pet_type),
-    '萌宠昵称': s.pet_name || '-',
-    '等级': s.level,
     '积分': s.points,
   }))
   const ws = XLSX.utils.json_to_sheet(exportData)
@@ -481,7 +437,7 @@ watch(() => classStore.currentClassId, fetchStudents)
 </script>
 
 <style scoped>
-.students-page { max-width: 1200px; }
+.students-page { width: 100%; }
 
 .page-header h1 { margin: 0; font-size: 22px; }
 
@@ -491,13 +447,20 @@ watch(() => classStore.currentClassId, fetchStudents)
   gap: 8px;
 }
 
-.filter-card { margin-bottom: 16px; }
-.filter-card :deep(.el-card__body) { padding: 12px 16px; }
-
+/* 筛选栏 */
 .filter-row {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  max-width: 320px;
+}
+
+.sort-select {
+  width: 120px;
 }
 
 /* 移动端卡片 */
@@ -530,11 +493,6 @@ watch(() => classStore.currentClassId, fetchStudents)
   gap: 10px;
   flex: 1;
   min-width: 0;
-}
-
-.student-avatar {
-  font-size: 28px;
-  flex-shrink: 0;
 }
 
 .student-info {
@@ -591,8 +549,12 @@ watch(() => classStore.currentClassId, fetchStudents)
     flex-direction: column;
   }
 
-  .filter-row .el-select {
-    width: 100% !important;
+  .search-input {
+    max-width: 100%;
+  }
+
+  .sort-select {
+    width: 100%;
   }
 }
 </style>

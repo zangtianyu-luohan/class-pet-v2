@@ -39,7 +39,7 @@ const doc = new Document({
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: "学生积分管理系统", font: "Microsoft YaHei", bold: true, size: 52, color: "1E3A5F" })] }),
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "v2.0", font: "Microsoft YaHei", size: 32, color: "666666" })] }),
       new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 100 }, children: [new TextRun({ text: "用户使用手册", font: "Microsoft YaHei", bold: true, size: 36, color: "2B579A" })] }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-10", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "版本：v2.0  |  更新日期：2026-05-16", font: "Microsoft YaHei", size: 20, color: "999999" })] }),
       pb(),
       new TableOfContents("目录", { hyperlink: true, headingStyleRange: "1-3" }),
       pb(),
@@ -77,17 +77,17 @@ const doc = new Document({
       // 第3章
       h1("第3章 学生管理"),
       h2("3.1 添加学生"),
-      p("侧边栏 → 学生管理 → 点击「添加学生」→ 填写学号、姓名、选择宠物类型。"),
+      p("侧边栏 → 学生管理 → 点击「添加学生」→ 填写学号和姓名即可。"),
       h2("3.2 批量导入"),
       p("支持两种批量导入方式："),
       h3("文本批量导入"),
-      p("点击「批量导入」→ 在文本框中每行输入一个学生（格式：学号,姓名,萌宠类型），点击导入。"),
+      p("点击「批量导入」→ 在文本框中每行输入一个学生（格式：学号,姓名），点击导入。"),
       h3("Excel 批量导入"),
       p("点击「批量导入」→ 切换到「Excel 导入」标签 → 上传 .xlsx 文件。系统会自动识别列名（支持中英文），预览数据后确认导入。"),
-      p("支持的列名：学号/编号/No、姓名/名字/Name、萌宠/宠物类型/Pet。萌宠类型支持中文（猫/狗/兔/熊猫/企鹅）和英文（cat/dog/rabbit/panda/penguin）。"),
+      p("支持的列名：学号/编号/No、姓名/名字/Name。系统会自动识别列名并匹配。"),
       h2("3.3 Excel 导出"),
       p("在学生管理页面点击「📥 导出Excel」按钮，可将当前班级的学生列表导出为 Excel 文件。"),
-      p("导出内容包括：学号、姓名、萌宠类型、当前积分。萌宠类型自动转为中文显示。"),
+      p("导出内容包括：学号、姓名、当前积分。"),
       h2("3.4 积分操作"),
       p("在学生列表中点击学生 → 进入学生详情页 → 点击「加分」或「减分」按钮 → 选择积分规则或手动输入积分和原因。"),
       makeTable(["操作", "说明"], [
@@ -95,9 +95,9 @@ const doc = new Document({
         ["➖ 减分", "输入扣分值和原因，积分下限为 0"],
         ["📝 积分记录", "查看该学生所有积分变动历史"],
       ], [2000, 7026]),
-      h2("3.3 宠物系统"),
-      p("每个学生可选择一个萌宠角色（🐱猫/🐶狗/🐰兔/🐼熊猫/🐧企鹅），积分累积可提升宠物等级。"),
-      h2("3.4 手机端适配"),
+      h2("3.5 表格显示优化"),
+      p("所有数据表格的列采用平均分布布局，移除固定宽度，使界面更加美观统一。电脑端和手机端均已适配。"),
+      h2("3.6 手机端适配"),
       p("手机端学生列表自动切换为卡片布局，点击卡片进入详情。表格横向可滚动。"),
       pb(),
 
@@ -174,7 +174,7 @@ const doc = new Document({
 
       // 第7章
       h1("第7章 排行榜"),
-      p("侧边栏 → 排行榜，按积分从高到低排列所有学生。显示排名、姓名、宠物、积分和等级。"),
+      p("侧边栏 → 排行榜，按积分从高到低排列所有学生。显示排名、姓名和积分。"),
       p("手机端排行榜自动切换为卡片布局。"),
       pb(),
 

@@ -16,20 +16,6 @@ from ..models.user import User
 router = APIRouter(prefix="/api/students", tags=["学生管理"])
 
 
-# 等级经验值表
-LEVEL_EXP = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500]
-
-
-def calc_level(points: int) -> tuple[int, float]:
-    level = 1
-    for i, exp in enumerate(LEVEL_EXP):
-        if points >= exp:
-            level = i + 1
-        else:
-            break
-    return level, points
-
-
 @router.get("/", response_model=list[StudentOut])
 async def list_students(
     class_id: int = Query(..., description="班级ID"),
@@ -49,8 +35,6 @@ async def list_students(
 
     if sort_by == "name":
         query = query.order_by(Student.name)
-    elif sort_by == "level":
-        query = query.order_by(Student.level.desc(), Student.points.desc())
     else:
         query = query.order_by(Student.points.desc())
 
@@ -80,8 +64,6 @@ async def create_student(
     student = Student(
         student_no=data.student_no,
         name=data.name,
-        pet_type=data.pet_type,
-        pet_name=data.pet_name,
         class_id=class_id,
     )
     db.add(student)
@@ -111,8 +93,6 @@ async def batch_create_students(
         student = Student(
             student_no=s.student_no,
             name=s.name,
-            pet_type=s.pet_type,
-            pet_name=s.pet_name,
             class_id=class_id,
         )
         db.add(student)
@@ -254,10 +234,6 @@ async def update_student(
         student.name = data.name
     if data.student_no is not None:
         student.student_no = data.student_no
-    if data.pet_type is not None:
-        student.pet_type = data.pet_type
-    if data.pet_name is not None:
-        student.pet_name = data.pet_name
 
     await db.flush()
     await db.refresh(student)
@@ -301,7 +277,6 @@ async def adjust_points(
         raise HTTPException(status_code=403, detail="无权操作")
 
     student.points += data.points
-    student.level, student.experience = calc_level(student.points)
 
     log = PointsLog(
         student_id=data.student_id,
@@ -337,7 +312,6 @@ async def batch_adjust_points(
             continue
 
         student.points += data.points
-        student.level, student.experience = calc_level(student.points)
 
         log = PointsLog(
             student_id=sid,
@@ -411,9 +385,9 @@ async def export_students_csv(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["序号", "学号", "姓名", "萌宠类型", "萌宠昵称", "等级", "积分"])
+    writer.writerow(["序号", "学号", "姓名", "积分"])
     for i, s in enumerate(students):
-        writer.writerow([i + 1, s.student_no, s.name, s.pet_type, s.pet_name, s.level, s.points])
+        writer.writerow([i + 1, s.student_no, s.name, s.points])
 
     output.seek(0)
     # 添加 BOM 以便 Excel 正确识别中文

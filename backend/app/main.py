@@ -45,14 +45,85 @@ async def ensure_tables():
     _tables_created = True
     print("[OK] Database tables ready")
 
-    # 自动迁移：确保 expires_at 列存在
     from sqlalchemy import text
+    # 检测数据库类型：PostgreSQL vs SQLite
+    is_sqlite = str(engine.url).startswith("sqlite")
+
+    async def _col_exists(conn, table, column):
+        """检查列是否已存在（跨数据库兼容）"""
+        if is_sqlite:
+            result = await conn.execute(text(f"PRAGMA table_info({table})"))
+            return any(row[1] == column for row in result.fetchall())
+        else:
+            result = await conn.execute(text(
+                f"SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                f"WHERE table_name='{table}' AND column_name='{column}')"
+            ))
+            return result.scalar()
+
+    async def _add_column(conn, table, column, col_def):
+        """添加列（如果不存在）"""
+        if not await _col_exists(conn, table, column):
+            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+            print(f"[OK] Migration: added {column} to {table}")
+        else:
+            print(f"[OK] Migration: {column} already exists in {table}")
+
+    async def _drop_column(conn, table, column):
+        """删除列（如果存在）"""
+        if await _col_exists(conn, table, column):
+            await conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {column}"))
+            print(f"[OK] Migration: dropped {column} from {table}")
+        else:
+            print(f"[OK] Migration: {column} already absent from {table}")
+
+    # 自动迁移：确保 expires_at 列存在
     try:
         async with engine.begin() as conn:
-            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ DEFAULT NULL"))
-        print("[OK] Migration: expires_at column ensured")
+            await _add_column(conn, "users", "expires_at", "TIMESTAMPTZ DEFAULT NULL" if not is_sqlite else "TEXT DEFAULT NULL")
     except Exception as e:
-        print(f"[SKIP] Migration check: {e}")
+        print(f"[SKIP] Migration expires_at: {e}")
+
+    # 自动迁移：确保 is_admin 列存在
+    try:
+        async with engine.begin() as conn:
+            await _add_column(conn, "users", "is_admin", "BOOLEAN DEFAULT FALSE")
+    except Exception as e:
+        print(f"[SKIP] Migration is_admin: {e}")
+
+    # 自动迁移：删除 students 表的 pet_type 和 pet_name 列
+    for col in ['pet_type', 'pet_name']:
+        try:
+            async with engine.begin() as conn:
+                await _drop_column(conn, "students", col)
+        except Exception as e:
+            print(f"[SKIP] Migration drop {col}: {e}")
+
+    # 自动迁移：删除 students 表的 avatar/level/experience 列
+    for col in ['avatar', 'level', 'experience']:
+        try:
+            async with engine.begin() as conn:
+                await _drop_column(conn, "students", col)
+        except Exception as e:
+            print(f"[SKIP] Migration drop {col}: {e}")
+
+    # 自动迁移：确保已存在的管理员账号 is_admin=TRUE
+    init_user = os.environ.get("INIT_ADMIN_USER")
+    if init_user:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("UPDATE users SET is_admin = TRUE WHERE username = :u"), {"u": init_user})
+            print(f"[OK] Migration: admin user '{init_user}' is_admin set to TRUE")
+        except Exception as e:
+            print(f"[SKIP] Migration admin is_admin: {e}")
+    else:
+        # 兜底：没有 INIT_ADMIN_USER 时，把有班级的用户设为管理员
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("UPDATE users SET is_admin = TRUE WHERE id IN (SELECT DISTINCT owner_id FROM classes)"))
+            print("[OK] Migration: class owners set as admin")
+        except Exception as e:
+            print(f"[SKIP] Migration class owners admin: {e}")
 
     # 通过环境变量初始化管理员（一次性使用后删除该变量）
     init_user = os.environ.get("INIT_ADMIN_USER")
@@ -68,16 +139,16 @@ async def ensure_tables():
             pw_hash = hash_password(init_pass)
             if existing:
                 await session.execute(
-                    text("UPDATE users SET password_hash = :p WHERE username = :u"),
+                    text("UPDATE users SET password_hash = :p, is_admin = TRUE WHERE username = :u"),
                     {"p": pw_hash, "u": init_user}
                 )
-                print(f"[OK] Admin user '{init_user}' password updated")
+                print(f"[OK] Admin user '{init_user}' password updated, is_admin=TRUE")
             else:
                 await session.execute(
-                    text("INSERT INTO users (username, password_hash, display_name) VALUES (:u, :p, :d)"),
+                    text("INSERT INTO users (username, password_hash, display_name, is_admin) VALUES (:u, :p, :d, TRUE)"),
                     {"u": init_user, "p": pw_hash, "d": "管理员"}
                 )
-                print(f"[OK] Admin user '{init_user}' created")
+                print(f"[OK] Admin user '{init_user}' created with is_admin=TRUE")
             await session.commit()
 
 
@@ -130,8 +201,17 @@ async def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
 
+# PyInstaller 打包兼容：检测是否在打包环境中运行
+if getattr(sys, 'frozen', False):
+    # 打包后：资源在 _MEIPASS 目录下
+    _BUNDLE_DIR = sys._MEIPASS
+else:
+    # 开发环境：正常路径
+    _BUNDLE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+
 # 管理后台独立页面
-TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+TEMPLATES_DIR = os.path.join(_BUNDLE_DIR, "app", "templates") if getattr(sys, 'frozen', False) else os.path.join(os.path.dirname(__file__), "templates")
 ADMIN_STATIC_DIR = os.path.join(TEMPLATES_DIR, "static")
 
 if os.path.isdir(ADMIN_STATIC_DIR):
@@ -146,22 +226,49 @@ async def admin_panel():
     return HTMLResponse(content="<h1>管理后台页面未找到</h1>", status_code=404)
 
 
-# 静态文件服务（前端）- 统一走 catch-all 以支持 gzip 预压缩
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+# 静态文件服务（前端）- 使用 StaticFiles 中间件，比 Python FileResponse 快得多
+STATIC_DIR = os.path.join(_BUNDLE_DIR, "static") if getattr(sys, 'frozen', False) else os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 if os.path.isdir(STATIC_DIR):
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import Response
+    import mimetypes
+
+    class GzipCacheMiddleware(BaseHTTPMiddleware):
+        """为 StaticFiles 提供 gzip 预压缩和长期缓存"""
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            path = request.url.path
+            # 为所有静态资源添加缓存头
+            if path.startswith("/assets/") or path.startswith("/admin-assets/"):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                # 检查是否可以返回 .gz 版本
+                accept = request.headers.get("accept-encoding", "")
+                if "gzip" in accept:
+                    if path.startswith("/assets/"):
+                        file_path = os.path.join(STATIC_DIR, path.lstrip("/"))
+                    else:
+                        file_path = os.path.join(ADMIN_STATIC_DIR, path.lstrip("/admin-assets/"))
+                    gz_path = file_path + ".gz"
+                    if os.path.isfile(gz_path):
+                        ct, _ = mimetypes.guess_type(file_path)
+                        return Response(
+                            content=open(gz_path, "rb").read(),
+                            media_type=ct,
+                            headers={
+                                "Content-Encoding": "gzip",
+                                "Vary": "Accept-Encoding",
+                                "Cache-Control": "public, max-age=31536000, immutable",
+                            },
+                        )
+            return response
+
+    app.add_middleware(GzipCacheMiddleware)
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
 
     @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str, request: Request):
-        """前端 SPA 路由兜底：非 API 路径都返回 index.html；支持 .gz 预压缩"""
+    async def serve_spa(full_path: str):
+        """前端 SPA 路由兜底：非 API/静态路径都返回 index.html"""
         file_path = os.path.join(STATIC_DIR, full_path)
         if os.path.isfile(file_path):
-            # 如果浏览器支持 gzip 且存在 .gz 文件，优先返回压缩版本
-            accept = request.headers.get("accept-encoding", "")
-            gz_path = file_path + ".gz"
-            if "gzip" in accept and os.path.isfile(gz_path):
-                import mimetypes
-                ct, _ = mimetypes.guess_type(file_path)
-                return FileResponse(gz_path, media_type=ct, headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": "public, max-age=31536000, immutable"})
-            return FileResponse(file_path, headers={"Cache-Control": "public, max-age=31536000, immutable"})
-        # index.html 不缓存，确保总是最新
+            return FileResponse(file_path, headers={"Cache-Control": "no-cache"})
         return FileResponse(os.path.join(STATIC_DIR, "index.html"), headers={"Cache-Control": "no-cache"})
