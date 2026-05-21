@@ -1,16 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
-
-
-def _sanitize(v: str) -> str:
-    """XSS 过滤"""
-    dangerous = ["<script", "</script", "javascript:", "onerror=", "onload=", "onclick="]
-    v_lower = v.lower()
-    for d in dangerous:
-        if d in v_lower:
-            raise ValueError("包含不允许的字符")
-    return v.strip()
+from ..utils.sanitize import sanitize_text
 
 
 class StudentCreate(BaseModel):
@@ -20,7 +11,7 @@ class StudentCreate(BaseModel):
     @field_validator("name", "student_no")
     @classmethod
     def sanitize(cls, v):
-        return _sanitize(v)
+        return sanitize_text(v)
 
 
 class StudentBatchCreate(BaseModel):

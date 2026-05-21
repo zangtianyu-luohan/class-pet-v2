@@ -23,6 +23,7 @@ const routes = [
       { path: 'points-logs', name: 'PointsLogs', component: () => import('../views/PointsLogs.vue') },
       { path: 'classes', name: 'Classes', component: () => import('../views/Classes.vue') },
       { path: 'settings', name: 'Settings', component: () => import('../views/Settings.vue') },
+      { path: 'screen', name: 'Screen', component: () => import('../views/Screen.vue') },
     ]
   },
 ]

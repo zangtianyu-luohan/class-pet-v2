@@ -8,7 +8,7 @@
 |---|------|
 | 前端 | Vue 3 + Vite + Element Plus + Pinia |
 | 后端 | FastAPI + SQLAlchemy (async) |
-| 数据库 | SQLite (开发) / PostgreSQL (生产) |
+| 数据库 | SQLite |
 | 认证 | JWT |
 
 ## 本地开发
@@ -32,23 +32,12 @@ npm run dev
 ### API 文档
 访问 http://localhost:8000/api/docs (Swagger UI)
 
-## 部署
+## 构建 EXE 桌面版
 
-### 1. Supabase 数据库
-1. 注册 https://supabase.com
-2. 创建项目，获取 PostgreSQL 连接字符串
-3. 修改 `backend/.env`:
-```
-DATABASE_URL=postgresql+asyncpg://postgres.xxx:password@aws-0-xx.pooler.supabase.com:6543/postgres
+```bash
+cd frontend && npm run build
+xcopy dist ..\backend\static /E /I /Y
+cd ..\build_exe && build.bat
 ```
 
-### 2. Render 后端
-1. 连接 GitHub 仓库
-2. 设置 Build Command: `pip install -r requirements.txt`
-3. 设置 Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. 添加环境变量
-
-### 3. Vercel 前端
-1. 连接 GitHub 仓库
-2. Framework: Vite
-3. 添加环境变量 `VITE_API_URL` 指向 Render 后端地址
+构建产物输出到 `build_exe/dist/学生积分管理系统/`，双击 EXE 即可运行（默认 http://127.0.0.1:8866）。

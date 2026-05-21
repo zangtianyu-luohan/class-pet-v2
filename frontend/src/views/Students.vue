@@ -7,6 +7,12 @@
         <el-button @click="showBatch = true" :icon="Document">批量导入</el-button>
         <el-button @click="showBatchPoints = true" :icon="Star" :disabled="!selected.length">批量积分</el-button>
         <el-button type="success" @click="exportStudentsExcel">📥 导出Excel</el-button>
+        <el-button @click="undoLast" :loading="undoLoading">↩ 撤销</el-button>
+        <el-popconfirm title="确定清零所有学生积分？此操作不可撤销！" @confirm="resetPoints">
+          <template #reference>
+            <el-button type="danger">🗑 清零积分</el-button>
+          </template>
+        </el-popconfirm>
       </div>
     </div>
 
@@ -36,6 +42,16 @@
             <el-button size="small" type="success" @click="openPoints(row, 10)">+10</el-button>
             <el-button size="small" type="warning" @click="openPoints(row, -5)">-5</el-button>
           </el-button-group>
+          <el-dropdown v-if="rules.length" trigger="click" @command="cmd => applyRule(row, cmd)" style="margin-left:4px;">
+            <el-button size="small">规则</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-for="r in rules" :key="r.id" :command="r.id">
+                  {{ r.icon }} {{ r.name }} ({{ r.points > 0 ? '+' : '' }}{{ r.points }})
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button size="small" @click="$router.push(`/students/${row.id}`)">详情</el-button>
           <el-popconfirm title="确定删除该学生？" @confirm="deleteStudent(row.id)">
             <template #reference>
@@ -156,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Search, Plus, Document, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -170,7 +186,11 @@ const sortBy = ref('points')
 const selected = ref([])
 const selectAll = ref(false)
 
-const isMobile = computed(() => window.innerWidth < 768)
+const windowWidth = ref(window.innerWidth)
+const isMobile = computed(() => windowWidth.value < 768)
+function onResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const showAdd = ref(false)
 const addForm = ref({ student_no: '', name: '' })
@@ -190,6 +210,9 @@ const batchTab = ref('excel')
 const excelFileName = ref('')
 const excelPreview = ref([])
 const excelErrors = ref([])
+
+const rules = ref([])
+const undoLoading = ref(false)
 
 function onSelect(rows) {
   selected.value = rows
@@ -432,8 +455,41 @@ async function exportStudentsExcel() {
   XLSX.writeFile(wb, `学生列表_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
-onMounted(fetchStudents)
-watch(() => classStore.currentClassId, fetchStudents)
+async function fetchRules() {
+  try { const res = await api.get('/api/rules/'); rules.value = res.data.filter(r => r.is_active) } catch { /* */ }
+}
+
+async function applyRule(student, ruleId) {
+  const rule = rules.value.find(r => r.id === ruleId)
+  if (!rule) return
+  try {
+    await api.post('/api/students/points/adjust', {
+      student_id: student.id, points: rule.points, reason: rule.name, category: rule.category
+    })
+    ElMessage.success(`${student.name} ${rule.points > 0 ? '+' : ''}${rule.points}（${rule.name}）`)
+    fetchStudents()
+  } catch (e) { /* handled */ }
+}
+
+async function undoLast() {
+  undoLoading.value = true
+  try {
+    const res = await api.post('/api/students/undo', null, { params: { class_id: classStore.currentClassId } })
+    ElMessage.success(res.data.message)
+    fetchStudents()
+  } catch (e) { /* handled */ } finally { undoLoading.value = false }
+}
+
+async function resetPoints() {
+  try {
+    const res = await api.post('/api/students/points/reset', null, { params: { class_id: classStore.currentClassId } })
+    ElMessage.success(res.data.message)
+    fetchStudents()
+  } catch (e) { /* handled */ }
+}
+
+onMounted(() => { fetchStudents(); fetchRules() })
+watch(() => classStore.currentClassId, () => { fetchStudents(); fetchRules() })
 </script>
 
 <style scoped>

@@ -1,15 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
-
-
-def _sanitize(v: str) -> str:
-    dangerous = ["<script", "</script", "javascript:", "onerror=", "onload=", "onclick="]
-    v_lower = v.lower()
-    for d in dangerous:
-        if d in v_lower:
-            raise ValueError("包含不允许的字符")
-    return v.strip()
+from ..utils.sanitize import sanitize_text
 
 
 class PointsAdjust(BaseModel):
@@ -21,7 +13,7 @@ class PointsAdjust(BaseModel):
     @field_validator("reason")
     @classmethod
     def sanitize(cls, v):
-        return _sanitize(v)
+        return sanitize_text(v)
 
 
 class PointsBatchAdjust(BaseModel):

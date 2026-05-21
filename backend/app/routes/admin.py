@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, text, inspect as sa_inspect
+from ..config import settings
 from ..database import get_db, engine
 from ..models.user import User
 from ..models.class_ import Class
@@ -202,7 +203,7 @@ async def system_stats(
         "system": {
             "python_version": platform.python_version(),
             "platform": platform.platform(),
-            "app_version": "2.0.0",
+            "app_version": settings.APP_VERSION,
         },
     }
 
@@ -221,7 +222,6 @@ async def list_users(
             "username": u.username,
             "display_name": u.display_name,
             "is_admin": u.is_admin,
-            "avatar": u.avatar,
             "expires_at": u.expires_at.isoformat() if u.expires_at else None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         }
@@ -265,7 +265,7 @@ async def delete_user(
     user: User = Depends(_require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """删除用户"""
+    """删除用户（级联清理关联数据）"""
     if user_id == user.id:
         raise HTTPException(status_code=400, detail="不能删除自己")
 
@@ -273,6 +273,35 @@ async def delete_user(
     target = result.scalar_one_or_none()
     if not target:
         raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 级联清理：先删学生关联数据，再删学生，再删班级
+
+    # 获取该用户所有班级
+    classes_result = await db.execute(select(Class.id).where(Class.owner_id == user_id))
+    class_ids = [row[0] for row in classes_result.all()]
+
+    if class_ids:
+        # 获取所有学生 ID
+        students_result = await db.execute(select(Student.id).where(Student.class_id.in_(class_ids)))
+        student_ids = [row[0] for row in students_result.all()]
+
+        if student_ids:
+            # 删除学生的积分日志和勋章关联
+            await db.execute(
+                PointsLog.__table__.delete().where(PointsLog.student_id.in_(student_ids))
+            )
+            await db.execute(
+                StudentBadge.__table__.delete().where(StudentBadge.student_id.in_(student_ids))
+            )
+        # 删除学生
+        await db.execute(Student.__table__.delete().where(Student.class_id.in_(class_ids)))
+        # 删除班级
+        await db.execute(Class.__table__.delete().where(Class.owner_id == user_id))
+
+    # 删除该用户的勋章、积分规则、颁发的勋章记录
+    await db.execute(Badge.__table__.delete().where(Badge.owner_id == user_id))
+    await db.execute(PointsRule.__table__.delete().where(PointsRule.owner_id == user_id))
+    await db.execute(StudentBadge.__table__.delete().where(StudentBadge.awarded_by == user_id))
 
     await db.delete(target)
     return {"message": "已删除"}
@@ -464,12 +493,14 @@ async def db_list_rows(
 
     # 搜索：对所有str类型字段做LIKE
     if search:
+        from ..utils.sanitize import escape_like
+        safe_search = escape_like(search)
         conditions = []
         for col in columns:
             if col["type"] == "str" and col["key"] not in HIDDEN_FIELDS:
                 attr = getattr(model, col["key"], None)
                 if attr is not None:
-                    conditions.append(attr.ilike(f"%{search}%"))
+                    conditions.append(attr.ilike(f"%{safe_search}%", escape="\\"))
         if conditions:
             query = query.where(or_(*conditions))
             count_query = count_query.where(or_(*conditions))

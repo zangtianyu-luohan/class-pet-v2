@@ -1,0 +1,46 @@
+# OpenSpec 项目全局层
+# 起手不能空着 —— 至少填 context，后面随项目推进自然变好
+
+context:
+  # 项目是什么（一句话说清楚）
+  description: "一个面向教师的班级积分管理系统，学生通过课堂表现获得积分，系统提供排行榜、勋章、课堂工具等激励机制，增加课堂趣味性"
+
+  # 技术栈
+  tech_stack:
+    frontend: "Vue 3 + Vite + Element Plus + Pinia + Vue Router + Axios"
+    backend: "FastAPI + SQLAlchemy (async) + Pydantic + Uvicorn"
+    database: "SQLite（本地文件，零配置）"
+    auth: "JWT（python-jose）+ bcrypt（passlib）"
+    admin: "自定义管理后台（/admin-panel）"
+
+  # 当前开发主线
+  current_phase: "S1 起手阶段，先把最小可成立增量跑通，走通一次完整 change 节奏"
+
+  # 长期约束（跨所有 change 都要守住的规则）
+  constraints:
+    - "前后端分离，REST API 通信，JSON 格式"
+    - "JWT 认证，所有接口（除注册/登录）需要 Bearer token"
+    - "异步全链路：路由到数据库全链路 async/await"
+    - "单表优先，不提前引入复杂架构"
+    - "积分变动必须记录到 points_logs 表，可追溯"
+    - "每个教师的班级和学生数据互相隔离"
+
+# proposal 约束
+proposal:
+  must_include:
+    - "Why：为什么做这个 change"
+    - "What Changes：做什么、不做什么（Out of Scope）"
+    - "Impact：影响哪些已有功能、哪些表、哪些接口"
+  boundary_rule: "先收边界再实现，change 的目标和范围必须在 proposal 里讲清"
+
+# specs 约束
+specs:
+  format: "每个 capability 一个目录，包含 spec.md"
+  naming: "verb-noun kebab-case"
+  scenario_format: "#### Scenario: xxx，必须有 WHEN/THEN"
+  requirement_wording: "使用 SHALL/MUST 表示强制要求"
+
+# tasks 约束
+tasks:
+  granularity: "每个 task 要能独立验证"
+  order: "按依赖顺序排列，先数据层再接口层再前端层"

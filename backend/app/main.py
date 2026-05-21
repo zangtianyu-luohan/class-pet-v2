@@ -5,8 +5,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
-# 修复 Railway 日志级别：uvicorn 默认输出到 stderr，Railway 把 stderr 标为 error
-# 将 uvicorn 的日志重定向到 stdout
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s:     %(message)s",
@@ -23,6 +21,7 @@ from .database import engine, Base, AsyncSession
 from .routes import (
     auth_router, classes_router, students_router,
     badges_router, leaderboard_router, rules_router, admin_router,
+    sse_router,
 )
 from .utils.security import SecurityHeadersMiddleware
 from .utils.exceptions import (
@@ -107,6 +106,13 @@ async def ensure_tables():
         except Exception as e:
             print(f"[SKIP] Migration drop {col}: {e}")
 
+    # 自动迁移：删除 users 表的 avatar 列
+    try:
+        async with engine.begin() as conn:
+            await _drop_column(conn, "users", "avatar")
+    except Exception as e:
+        print(f"[SKIP] Migration drop users.avatar: {e}")
+
     # 自动迁移：确保已存在的管理员账号 is_admin=TRUE
     init_user = os.environ.get("INIT_ADMIN_USER")
     if init_user:
@@ -130,7 +136,6 @@ async def ensure_tables():
     init_pass = os.environ.get("INIT_ADMIN_PASS")
     if init_user and init_pass:
         from .utils.auth import hash_password
-        from sqlalchemy import text
         async with AsyncSession(engine) as session:
             result = await session.execute(
                 text("SELECT id FROM users WHERE username = :u"), {"u": init_user}
@@ -194,6 +199,7 @@ app.include_router(badges_router)
 app.include_router(leaderboard_router)
 app.include_router(rules_router)
 app.include_router(admin_router)
+app.include_router(sse_router, tags=["SSE"])
 
 
 @app.get("/api/health")
@@ -222,7 +228,8 @@ if os.path.isdir(ADMIN_STATIC_DIR):
 async def admin_panel():
     html_path = os.path.join(TEMPLATES_DIR, "admin.html")
     if os.path.exists(html_path):
-        return HTMLResponse(content=open(html_path, encoding="utf-8").read())
+        with open(html_path, encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>管理后台页面未找到</h1>", status_code=404)
 
 

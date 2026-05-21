@@ -48,7 +48,7 @@ const doc = new Document({
       h1("第1章 快速开始"),
       h2("1.1 访问系统"),
       p("在浏览器中打开系统地址即可使用，支持电脑和手机端。"),
-      b("电脑端：https://sps-production-6221.up.railway.app"),
+      b("电脑端：http://127.0.0.1:8866"),
       b("手机端：同上地址，自动适配手机屏幕"),
       h2("1.2 登录"),
       p("1. 打开系统地址，进入登录页面"),
@@ -209,7 +209,7 @@ const doc = new Document({
       // 第10章
       h1("第10章 管理后台"),
       p("独立的管理后台，用于系统级别的数据管理和维护。"),
-      p("访问地址：https://sps-production-6221.up.railway.app/admin-panel"),
+      p("访问地址：http://127.0.0.1:8866/admin-panel"),
       h2("10.1 登录"),
       p("使用管理员账号登录管理后台（默认账号：admin，密码：Zty256310x）。"),
       p("管理后台包含以下功能模块："),
@@ -279,9 +279,9 @@ const doc = new Document({
       pb(),
       h1("附录：系统地址"),
       makeTable(["用途", "地址"], [
-        ["教师端", "https://sps-production-6221.up.railway.app"],
-        ["管理后台", "https://sps-production-6221.up.railway.app/admin-panel"],
-        ["API 文档", "https://sps-production-6221.up.railway.app/docs"],
+        ["教师端", "http://127.0.0.1:8866"],
+        ["管理后台", "http://127.0.0.1:8866/admin-panel"],
+        ["API 文档", "http://127.0.0.1:8866/docs"],
       ], [3000, 6026]),
     ]
   }]

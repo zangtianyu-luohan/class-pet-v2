@@ -1,1 +1,0 @@
-{"query":"mutation { serviceInstanceUpdate(serviceId: \"0b36e499-fc12-4850-89dd-0392dd03242c\", environmentId: \"2e416499-6004-40e6-a051-8d6b28204cb3\", input: {startCommand: \"bash -c \\\"uvicorn app.main:app --host 0.0.0.0 --port $PORT\\\"\"}) }"}

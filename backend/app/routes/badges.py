@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from ..database import get_db
 from ..models.badge import Badge, StudentBadge
 from ..models.student import Student
@@ -127,20 +128,18 @@ async def get_student_badges(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(StudentBadge).where(StudentBadge.student_id == student_id)
+        select(StudentBadge)
+        .options(selectinload(StudentBadge.badge), selectinload(StudentBadge.student))
+        .where(StudentBadge.student_id == student_id)
     )
     sbs = result.scalars().all()
 
     out = []
     for sb in sbs:
-        badge_r = await db.execute(select(Badge).where(Badge.id == sb.badge_id))
-        badge = badge_r.scalar_one_or_none()
-        student_r = await db.execute(select(Student).where(Student.id == sb.student_id))
-        student = student_r.scalar_one_or_none()
         o = StudentBadgeOut.model_validate(sb)
-        o.badge_name = badge.name if badge else "未知"
-        o.badge_icon = badge.icon if badge else "🏅"
-        o.student_name = student.name if student else "未知"
+        o.badge_name = sb.badge.name if sb.badge else "未知"
+        o.badge_icon = sb.badge.icon if sb.badge else "🏅"
+        o.student_name = sb.student.name if sb.student else "未知"
         out.append(o)
     return out
 
@@ -152,19 +151,18 @@ async def get_award_records(
 ):
     """获取当前用户颁发的所有勋章记录"""
     result = await db.execute(
-        select(StudentBadge).where(StudentBadge.awarded_by == user.id).order_by(StudentBadge.awarded_at.desc())
+        select(StudentBadge)
+        .options(selectinload(StudentBadge.badge), selectinload(StudentBadge.student))
+        .where(StudentBadge.awarded_by == user.id)
+        .order_by(StudentBadge.awarded_at.desc())
     )
     sbs = result.scalars().all()
 
     out = []
     for sb in sbs:
-        badge_r = await db.execute(select(Badge).where(Badge.id == sb.badge_id))
-        badge = badge_r.scalar_one_or_none()
-        student_r = await db.execute(select(Student).where(Student.id == sb.student_id))
-        student = student_r.scalar_one_or_none()
         o = StudentBadgeOut.model_validate(sb)
-        o.badge_name = badge.name if badge else "已删除"
-        o.badge_icon = badge.icon if badge else "🏅"
-        o.student_name = student.name if student else "已删除"
+        o.badge_name = sb.badge.name if sb.badge else "已删除"
+        o.badge_icon = sb.badge.icon if sb.badge else "🏅"
+        o.student_name = sb.student.name if sb.student else "已删除"
         out.append(o)
     return out

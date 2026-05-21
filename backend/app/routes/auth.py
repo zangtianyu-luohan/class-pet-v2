@@ -140,8 +140,6 @@ async def update_me(
 ):
     if data.display_name is not None:
         user.display_name = data.display_name
-    if data.avatar is not None:
-        user.avatar = data.avatar
     await db.flush()
     await db.refresh(user)
     return UserOut.model_validate(user)

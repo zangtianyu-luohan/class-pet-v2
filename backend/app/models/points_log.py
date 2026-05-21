@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func, Text, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func, Boolean
 from sqlalchemy.orm import relationship
 from ..database import Base
 
@@ -7,12 +7,12 @@ class PointsLog(Base):
     __tablename__ = "points_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     points = Column(Integer, nullable=False)  # 正数加分，负数减分
     reason = Column(String(200), nullable=False)
     category = Column(String(50), default="manual")  # manual/bonus/penalty/tool
     operator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     student = relationship("Student", back_populates="points_logs")
     operator = relationship("User", backref="points_logs")

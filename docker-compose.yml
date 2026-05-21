@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: student-points-db
+    restart: always
+    environment:
+      POSTGRES_DB: student_points
+      POSTGRES_USER: ztylh
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c max_connections=10
+      -c log_statement=none
+      -c log_min_duration_statement=-1
+      -c idle_in_transaction_session_timeout=0
+      -c deadlock_timeout=1s
+      -c maintenance_work_mem=64MB
+      -c effective_cache_size=128MB
+      -c wal_buffers=4MB
+      -c checkpoint_segments=8
+      -c autovacuum=on
+      -c autovacuum_vacuum_scale_factor=0.1
+      -c autovacuum_analyze_scale_factor=0.05
+      -c listen_addresses='*'
+      -c password_encryption=trust
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ztylh -d student_points"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: student-points-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ztylh:${DB_PASSWORD}@db:5432/student_points
+      SECRET_KEY: ${SECRET_KEY}
+      TZ: Asia/Shanghai
+      LANG: zh_CN.UTF-8
+    ports:
+      - "8866:8866"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      gunicorn app.main:app
+      --workers 2
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8866
+      --timeout 30
+      --keep-alive 60
+
+  frontend:
+    image: nginx:alpine
+    container_name: student-points-frontend
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+
+networks:
+  default:
+    driver: bridge

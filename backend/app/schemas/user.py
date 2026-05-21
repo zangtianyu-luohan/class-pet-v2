@@ -2,6 +2,7 @@ import re
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional
+from ..utils.sanitize import sanitize_text
 
 
 def _validate_password_strength(v: str) -> str:
@@ -15,16 +16,6 @@ def _validate_password_strength(v: str) -> str:
     if not re.search(r"\d", v):
         raise ValueError("密码必须包含数字")
     return v
-
-
-def _sanitize_text(v: str) -> str:
-    """基础 XSS 过滤：移除危险字符"""
-    dangerous = ["<script", "</script", "javascript:", "onerror=", "onload=", "onclick="]
-    v_lower = v.lower()
-    for d in dangerous:
-        if d in v_lower:
-            raise ValueError("包含不允许的字符")
-    return v.strip()
 
 
 # ===== 请求 =====
@@ -41,7 +32,7 @@ class UserRegister(BaseModel):
     @field_validator("username", "display_name")
     @classmethod
     def sanitize_user_input(cls, v):
-        return _sanitize_text(v)
+        return sanitize_text(v)
 
 
 class UserLogin(BaseModel):
@@ -53,12 +44,16 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
-    avatar: Optional[str] = None
 
 
 class PasswordChange(BaseModel):
     old_password: str
-    new_password: str = Field(..., min_length=4, max_length=100)
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+    @field_validator("new_password")
+    @classmethod
+    def check_password_strength(cls, v):
+        return _validate_password_strength(v)
 
 
 # ===== 响应 =====
@@ -67,7 +62,6 @@ class UserOut(BaseModel):
     username: str
     display_name: str
     is_admin: bool = False
-    avatar: Optional[str] = ""
     expires_at: Optional[datetime] = None
     created_at: datetime
 

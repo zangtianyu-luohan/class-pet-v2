@@ -116,10 +116,21 @@ def generate_captcha_image(question: str) -> bytes:
             color = (random.randint(100, 200), random.randint(100, 200), random.randint(100, 200))
             draw.line([(x1, y1), (x2, y2)], fill=color, width=1)
 
-        # 文字
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
-        except:
+        # 文字（跨平台字体路径）
+        font = None
+        font_paths = [
+            "C:/Windows/Fonts/msyh.ttc",      # Windows 微软雅黑
+            "C:/Windows/Fonts/simhei.ttf",     # Windows 黑体
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+            "/System/Library/Fonts/PingFang.ttc",  # macOS
+        ]
+        for fp in font_paths:
+            try:
+                font = ImageFont.truetype(fp, 24)
+                break
+            except (OSError, IOError):
+                continue
+        if font is None:
             font = ImageFont.load_default()
 
         draw.text((20, 15), question, fill=(50, 50, 150), font=font)

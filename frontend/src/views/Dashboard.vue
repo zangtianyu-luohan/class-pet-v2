@@ -63,6 +63,9 @@
         <el-button @click="$router.push('/badges')">
           <el-icon><Medal /></el-icon> 颁发勋章
         </el-button>
+        <el-button @click="$router.push('/screen')" type="warning">
+          <el-icon><Monitor /></el-icon> 大屏展示
+        </el-button>
       </div>
     </el-card>
 
@@ -70,16 +73,42 @@
     <el-empty v-if="stats.total_students === 0" description="还没有学生">
       <el-button type="primary" @click="$router.push('/students')">去添加学生</el-button>
     </el-empty>
+
+    <!-- 近7天积分趋势 -->
+    <el-card v-if="stats.total_students > 0" shadow="never" class="trend-card">
+      <template #header><span>📈 近7天积分趋势</span></template>
+      <div class="trend-chart">
+        <div v-for="day in trend" :key="day.date" class="trend-bar-wrap">
+          <div class="trend-bar" :style="{ height: barHeight(day.count) + '%' }">
+            <span class="trend-count" v-if="day.count > 0">{{ day.count }}</span>
+          </div>
+          <div class="trend-label">{{ day.date }}</div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 快速加分悬浮按钮 -->
+    <div class="quick-points-fab" @click="showQuickPoints = true">
+      <el-icon size="24"><Plus /></el-icon>
+    </div>
+
+    <!-- 快速加分面板 -->
+    <QuickPoints v-model="showQuickPoints" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api'
 import { useClassStore } from '../stores/class'
+import QuickPoints from '../components/QuickPoints.vue'
+import { Monitor, Plus } from '@element-plus/icons-vue'
+
+const showQuickPoints = ref(false)
 
 const classStore = useClassStore()
 const stats = ref({ total_students: 0, total_points: 0, avg_points: 0, today_records: 0 })
+const trend = ref([])
 
 async function fetchStats() {
   if (!classStore.currentClassId) return
@@ -89,8 +118,33 @@ async function fetchStats() {
   } catch (e) { /* handled */ }
 }
 
-onMounted(fetchStats)
-watch(() => classStore.currentClassId, fetchStats)
+async function fetchTrend() {
+  if (!classStore.currentClassId) return
+  try {
+    // 从积分日志中统计近7天
+    const res = await api.get('/api/students/points-logs', {
+      params: { class_id: classStore.currentClassId, page_size: 500 }
+    })
+    const logs = res.data.items || []
+    const now = new Date()
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const label = `${d.getMonth() + 1}/${d.getDate()}`
+      const dateStr = d.toISOString().slice(0, 10)
+      const count = logs.filter(l => l.created_at && l.created_at.slice(0, 10) === dateStr).length
+      days.push({ date: label, count })
+    }
+    trend.value = days
+  } catch { trend.value = [] }
+}
+
+const maxTrend = computed(() => Math.max(1, ...trend.value.map(d => d.count)))
+function barHeight(count) { return Math.max(4, (count / maxTrend.value) * 100) }
+
+onMounted(() => { fetchStats(); fetchTrend() })
+watch(() => classStore.currentClassId, () => { fetchStats(); fetchTrend() })
 </script>
 
 <style scoped>
@@ -163,6 +217,14 @@ watch(() => classStore.currentClassId, fetchStats)
   min-width: 120px;
 }
 
+/* 趋势图 */
+.trend-card { border-radius: 16px; margin-bottom: 20px; }
+.trend-chart { display: flex; align-items: flex-end; justify-content: space-around; height: 160px; gap: 8px; padding: 0 8px; }
+.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+.trend-bar { width: 100%; max-width: 48px; background: linear-gradient(180deg, #6366f1, #818cf8); border-radius: 6px 6px 0 0; transition: height 0.3s; position: relative; min-height: 4px; }
+.trend-count { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: #6366f1; white-space: nowrap; }
+.trend-label { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
 /* 手机端 */
 @media (max-width: 767px) {
   .stat-card :deep(.el-card__body) {
@@ -192,5 +254,28 @@ watch(() => classStore.currentClassId, fetchStats)
   .action-buttons .el-button {
     width: 100%;
   }
+}
+
+.quick-points-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 100;
+  color: #fff;
+}
+
+.quick-points-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
 }
 </style>

@@ -12,10 +12,6 @@ frontend/dist/
 backend/static/
 .DS_Store
 
-# CloudBase (legacy)
-cloudfunctions/
-cloudbaserc.json
-
 # IDE
 .vscode/
 .idea/
@@ -23,7 +19,13 @@ cloudbaserc.json
 # OS
 Thumbs.db
 Desktop.ini
-.vercel
 
-# Docs temp
-docs/~*.docx
+# Build artifacts
+build_exe/dist/
+build_exe/build/
+
+# Docs node_modules
+docs/scripts/node_modules/
+
+# Claude Code artifacts
+skills-lock.json

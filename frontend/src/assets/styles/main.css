@@ -43,22 +43,6 @@ body {
   margin: 0;
 }
 
-/* 登录页 */
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1e1b4b, #312e81, #1e1b4b);
-  padding: 20px;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  border-radius: 20px;
-}
-
 /* 统计卡片 */
 .stat-card .stat-icon {
   width: 44px;

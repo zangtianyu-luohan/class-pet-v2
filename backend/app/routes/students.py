@@ -1,6 +1,7 @@
 import csv
 import io
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from urllib.parse import quote
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
@@ -11,6 +12,7 @@ from ..models.points_log import PointsLog
 from ..schemas.student import StudentCreate, StudentBatchCreate, StudentUpdate, StudentOut
 from ..schemas.points import PointsAdjust, PointsBatchAdjust, PointsLogOut
 from ..utils.deps import get_current_user
+from ..utils.sanitize import escape_like
 from ..models.user import User
 
 router = APIRouter(prefix="/api/students", tags=["学生管理"])
@@ -31,7 +33,8 @@ async def list_students(
 
     query = select(Student).where(Student.class_id == class_id)
     if search:
-        query = query.where(or_(Student.name.contains(search), Student.student_no.contains(search)))
+        safe = escape_like(search)
+        query = query.where(or_(Student.name.like(f"%{safe}%", escape="\\"), Student.student_no.like(f"%{safe}%", escape="\\")))
 
     if sort_by == "name":
         query = query.order_by(Student.name)
@@ -164,7 +167,8 @@ async def list_points_logs(
     count_filter = combined_filter
     logs_filter = combined_filter
     if matched_student_ids is not None:
-        search_filter = PointsLog.student_id.in_(matched_student_ids) | PointsLog.reason.ilike(f"%{search}%")
+        safe_search = escape_like(search)
+        search_filter = PointsLog.student_id.in_(matched_student_ids) | PointsLog.reason.like(f"%{safe_search}%", escape="\\")
         count_filter = combined_filter & search_filter
         logs_filter = combined_filter & search_filter
 
@@ -193,6 +197,44 @@ async def list_points_logs(
             "created_at": log.created_at.isoformat() if log.created_at else "",
         })
     return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+# ===== CSV 导出（必须在 /{student_id} 之前，否则 "export" 会被当作 student_id）=====
+@router.get("/export")
+async def export_students_csv(
+    class_id: int = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    cls_result = await db.execute(select(Class).where(Class.id == class_id, Class.owner_id == user.id))
+    cls = cls_result.scalar_one_or_none()
+    if not cls:
+        raise HTTPException(status_code=403, detail="无权访问")
+
+    result = await db.execute(
+        select(Student).where(Student.class_id == class_id).order_by(Student.points.desc())
+    )
+    students = result.scalars().all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["序号", "学号", "姓名", "积分"])
+    for i, s in enumerate(students):
+        writer.writerow([i + 1, s.student_no, s.name, s.points])
+
+    output.seek(0)
+    # 添加 BOM 以便 Excel 正确识别中文
+    bom_output = io.BytesIO()
+    bom_output.write(b'\xef\xbb\xbf')
+    bom_output.write(output.getvalue().encode('utf-8'))
+    bom_output.seek(0)
+
+    filename = quote(f"{cls.name}_学生数据.csv")
+    return StreamingResponse(
+        bom_output,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+    )
 
 
 @router.get("/{student_id}", response_model=StudentOut)
@@ -276,6 +318,10 @@ async def adjust_points(
     if not cls_result.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="无权操作")
 
+    # 积分下限保护：不允许低于 -100
+    if student.points + data.points < -100:
+        raise HTTPException(status_code=400, detail=f"积分不能低于 -100（当前 {student.points}）")
+
     student.points += data.points
 
     log = PointsLog(
@@ -300,15 +346,25 @@ async def batch_adjust_points(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # 批量查询所有学生（避免 N+1）
+    result = await db.execute(select(Student).where(Student.id.in_(data.student_ids)))
+    students_map = {s.id: s for s in result.scalars().all()}
+
+    # 批量验证班级归属
+    class_ids = {s.class_id for s in students_map.values()}
+    cls_result = await db.execute(
+        select(Class.id).where(Class.id.in_(class_ids), Class.owner_id == user.id)
+    )
+    owned_class_ids = {row[0] for row in cls_result.all()}
+
     logs = []
     for sid in data.student_ids:
-        result = await db.execute(select(Student).where(Student.id == sid))
-        student = result.scalar_one_or_none()
-        if not student:
+        student = students_map.get(sid)
+        if not student or student.class_id not in owned_class_ids:
             continue
 
-        cls_result = await db.execute(select(Class).where(Class.id == student.class_id, Class.owner_id == user.id))
-        if not cls_result.scalar_one_or_none():
+        # 积分下限保护
+        if student.points + data.points < -100:
             continue
 
         student.points += data.points
@@ -321,13 +377,99 @@ async def batch_adjust_points(
             operator_id=user.id,
         )
         db.add(log)
-        await db.flush()
+        logs.append((log, student.name))
+
+    # 统一 flush，保证事务一致性
+    await db.flush()
+    for log, name in logs:
         await db.refresh(log)
 
+    result = []
+    for log, name in logs:
         out = PointsLogOut.model_validate(log)
-        out.student_name = student.name
-        logs.append(out)
-    return logs
+        out.student_name = name
+        result.append(out)
+    return result
+
+
+@router.post("/points/reset")
+async def reset_class_points(
+    class_id: int = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """一键清零班级所有学生积分"""
+    cls_result = await db.execute(select(Class).where(Class.id == class_id, Class.owner_id == user.id))
+    if not cls_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="无权操作")
+
+    result = await db.execute(select(Student).where(Student.class_id == class_id))
+    students = result.scalars().all()
+    count = 0
+    for s in students:
+        if s.points != 0:
+            # 记录清零日志
+            log = PointsLog(
+                student_id=s.id,
+                points=-s.points,
+                reason="学期积分清零",
+                category="reset",
+                operator_id=user.id,
+            )
+            db.add(log)
+            s.points = 0
+            count += 1
+
+    await db.flush()
+    return {"message": f"已清零 {count} 名学生的积分"}
+
+
+@router.post("/points/undo")
+async def undo_last_points(
+    class_id: int = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """撤销当前用户在该班级的最后一条积分操作"""
+    cls_result = await db.execute(select(Class).where(Class.id == class_id, Class.owner_id == user.id))
+    if not cls_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="无权操作")
+
+    # 获取班级所有学生 ID
+    students_result = await db.execute(select(Student.id).where(Student.class_id == class_id))
+    student_ids = [row[0] for row in students_result.all()]
+    if not student_ids:
+        raise HTTPException(status_code=400, detail="班级没有学生")
+
+    # 查找当前用户的最后一条操作
+    log_result = await db.execute(
+        select(PointsLog)
+        .where(PointsLog.student_id.in_(student_ids), PointsLog.operator_id == user.id)
+        .order_by(PointsLog.created_at.desc())
+        .limit(1)
+    )
+    last_log = log_result.scalar_one_or_none()
+    if not last_log:
+        raise HTTPException(status_code=400, detail="没有可撤销的操作")
+
+    # 撤销：反向操作
+    student_result = await db.execute(select(Student).where(Student.id == last_log.student_id))
+    student = student_result.scalar_one_or_none()
+    if student:
+        student.points -= last_log.points
+
+    # 记录撤销日志
+    undo_log = PointsLog(
+        student_id=last_log.student_id,
+        points=-last_log.points,
+        reason=f"撤销：{last_log.reason}",
+        category="undo",
+        operator_id=user.id,
+    )
+    db.add(undo_log)
+    await db.flush()
+
+    return {"message": f"已撤销对 {student.name} 的 {last_log.points:+d} 积分（{last_log.reason}）"}
 
 
 @router.get("/{student_id}/logs", response_model=list[PointsLogOut])
@@ -336,6 +478,17 @@ async def get_student_logs(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # 先查询学生信息（单次查询）
+    student_result = await db.execute(select(Student).where(Student.id == student_id))
+    student = student_result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    # 验证班级归属
+    cls_result = await db.execute(select(Class).where(Class.id == student.class_id, Class.owner_id == user.id))
+    if not cls_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="无权访问")
+
     result = await db.execute(
         select(PointsLog)
         .where(PointsLog.student_id == student_id)
@@ -346,59 +499,7 @@ async def get_student_logs(
 
     out = []
     for log in logs:
-        student_result = await db.execute(select(Student).where(Student.id == log.student_id))
-        student = student_result.scalar_one_or_none()
         o = PointsLogOut.model_validate(log)
-        o.student_name = student.name if student else "未知"
+        o.student_name = student.name
         out.append(o)
     return out
-
-
-# ===== Excel 批量导入 =====
-@router.post("/import-excel")
-async def import_students_excel(
-    class_id: int,
-    file: bytes,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Excel 批量导入学生（通过 multipart form）"""
-    pass  # 由下方独立路由处理
-
-
-# ===== CSV 导出 =====
-@router.get("/export")
-async def export_students_csv(
-    class_id: int = Query(...),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    cls_result = await db.execute(select(Class).where(Class.id == class_id, Class.owner_id == user.id))
-    cls = cls_result.scalar_one_or_none()
-    if not cls:
-        raise HTTPException(status_code=403, detail="无权访问")
-
-    result = await db.execute(
-        select(Student).where(Student.class_id == class_id).order_by(Student.points.desc())
-    )
-    students = result.scalars().all()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["序号", "学号", "姓名", "积分"])
-    for i, s in enumerate(students):
-        writer.writerow([i + 1, s.student_no, s.name, s.points])
-
-    output.seek(0)
-    # 添加 BOM 以便 Excel 正确识别中文
-    bom_output = io.BytesIO()
-    bom_output.write(b'\xef\xbb\xbf')
-    bom_output.write(output.getvalue().encode('utf-8'))
-    bom_output.seek(0)
-
-    filename = f"{cls.name}_学生数据.csv"
-    return StreamingResponse(
-        bom_output,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
-    )
